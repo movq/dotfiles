@@ -1,0 +1,292 @@
+# i3 config file (v4) for Regolith Desktop Environment
+#
+# Please see http://i3wm.org/docs/userguide.html for a complete reference!
+
+# This defines which key super maps to on your keyboard.  
+# Alt key is Mod1, and Windows key is Mod4
+set $mod Mod4
+
+# This is the Solarized color palette.
+set $base03    #002b36
+set $base02    #073642
+set $base01    #586e75
+set $base00    #657b83
+set $base0     #839496
+set $base1     #93a1a1
+set $base2     #eee8d5
+set $base3     #fdf6e3
+set $yellow    #b58900
+set $orange    #cb4b10
+set $red       #dc322f
+set $magenta   #d33682
+set $violet    #6c71c4
+set $blue      #268bd2
+set $cyan      #2aa198
+set $green     #859900
+set $transparent #00000000
+set $lucent    #00000088
+
+# This is the labels which describe each i3 workspace.
+set $ws1   " 1 "
+set $ws2   " 2 "
+set $ws3   " 3 "
+set $ws4   " 4 "
+set $ws5   " 5 "
+set $ws6   " 6 "
+set $ws7   " 7 "
+set $ws8   " 8 "
+set $ws9   " 9 "
+set $ws10  "10 "
+set $ws11  "11 "
+set $ws12  "12 "
+set $ws13  "13 "
+set $ws14  "14 "
+set $ws15  "15 "
+set $ws16  "16 "
+set $ws17  "17 "
+set $ws18  "18 "
+set $ws19  "19 "
+
+font pango:Ubuntu Regular 10
+
+# Invisible workspace
+set $ws20 " "
+
+# Use Mouse+$mod to drag floating windows to their wanted position
+floating_modifier $mod
+
+hide_edge_borders smart
+
+# start a terminal
+bindsym $mod+Return exec alacritty -e fish&
+
+# start a web browser
+bindsym $mod+Shift+Return exec firefox&
+
+# kill focused window
+bindsym $mod+Shift+apostrophe kill
+
+# rofi app and window launchers
+bindsym $mod+e exec wofi --show drun -i
+bindsym $mod+Shift+e exec wofi --show run
+
+# change focus
+bindsym $mod+h focus left
+bindsym $mod+t focus up
+bindsym $mod+n focus down
+bindsym $mod+s focus right
+bindsym $mod+a focus parent
+
+# alternatively, you can use the cursor keys:
+bindsym $mod+Left focus left
+bindsym $mod+Down focus down
+bindsym $mod+Up focus up
+bindsym $mod+Right focus right
+
+# move focused window
+bindsym $mod+Shift+H move left
+bindsym $mod+Shift+T move up
+bindsym $mod+Shift+N move down
+bindsym $mod+Shift+S move right
+
+# alternatively, you can use the cursor keys:
+bindsym $mod+Shift+Left move left
+bindsym $mod+Shift+Down move down
+bindsym $mod+Shift+Up move up
+bindsym $mod+Shift+Right move right
+
+# split in horizontal orientation
+bindsym $mod+d split h
+
+# split in vertical orientation
+bindsym $mod+k split v
+
+# toggle split orientation
+bindsym $mod+BackSpace split toggle
+
+# enter fullscreen mode for the focused container
+bindsym $mod+u fullscreen toggle
+
+# change container layout (stacked, tabbed, toggle split)
+bindsym $mod+o layout stacking
+bindsym $mod+comma layout tabbed
+bindsym $mod+period layout toggle split
+
+
+# change gaps interactively
+bindsym $mod+minus gaps inner current minus 6
+bindsym $mod+plus gaps inner current plus 6
+
+# show/hide keybindings
+bindsym $mod+Shift+question exec /usr/bin/conky-toggle.sh
+
+# toggle tiling / floating
+bindsym $mod+Shift+u floating toggle
+
+# change focus between tiling / floating windows
+bindsym $mod+space focus mode_toggle
+
+# switch to workspace
+bindsym $mod+1 workspace $ws1
+bindsym $mod+2 workspace $ws2
+bindsym $mod+3 workspace $ws3
+bindsym $mod+4 workspace $ws4
+bindsym $mod+5 workspace $ws5
+bindsym $mod+6 workspace $ws6
+bindsym $mod+7 workspace $ws7
+bindsym $mod+8 workspace $ws8
+bindsym $mod+9 workspace $ws9
+bindsym $mod+0 workspace $ws10
+bindsym $mod+Ctrl+1 workspace $ws11
+bindsym $mod+Ctrl+2 workspace $ws12
+bindsym $mod+Ctrl+3 workspace $ws13
+bindsym $mod+Ctrl+4 workspace $ws14
+bindsym $mod+Ctrl+5 workspace $ws15
+bindsym $mod+Ctrl+6 workspace $ws16
+bindsym $mod+Ctrl+7 workspace $ws17
+bindsym $mod+Ctrl+8 workspace $ws18
+bindsym $mod+Ctrl+9 workspace $ws19
+
+bindsym $mod+grave workspace $ws20
+
+# cycle between workspace
+bindsym $mod+Tab workspace next
+bindsym $mod+Shift+Tab workspace prev
+
+# move focused container to workspace
+bindsym $mod+Shift+1 move container to workspace $ws1
+bindsym $mod+Shift+2 move container to workspace $ws2
+bindsym $mod+Shift+3 move container to workspace $ws3
+bindsym $mod+Shift+4 move container to workspace $ws4
+bindsym $mod+Shift+5 move container to workspace $ws5
+bindsym $mod+Shift+6 move container to workspace $ws6
+bindsym $mod+Shift+7 move container to workspace $ws7
+bindsym $mod+Shift+8 move container to workspace $ws8
+bindsym $mod+Shift+9 move container to workspace $ws9
+bindsym $mod+Shift+0 move container to workspace $ws10
+bindsym $mod+Shift+Ctrl+1 move container to workspace $ws11
+bindsym $mod+Shift+Ctrl+2 move container to workspace $ws12
+bindsym $mod+Shift+Ctrl+3 move container to workspace $ws13
+bindsym $mod+Shift+Ctrl+4 move container to workspace $ws14
+bindsym $mod+Shift+Ctrl+5 move container to workspace $ws15
+bindsym $mod+Shift+Ctrl+6 move container to workspace $ws16
+bindsym $mod+Shift+Ctrl+7 move container to workspace $ws17
+bindsym $mod+Shift+Ctrl+8 move container to workspace $ws18
+bindsym $mod+Shift+Ctrl+9 move container to workspace $ws19
+
+bindsym $mod+Shift+grave move container to workspace $ws20
+
+# reload the configuration file
+bindsym $mod+Shift+J reload
+
+# restart i3 inplace (preserves your layout/session, can be used to upgrade i3)
+bindsym $mod+Shift+P restart
+
+# exit i3
+bindsym $mod+Shift+period exit
+
+# lock the screen
+bindsym $mod+Escape exec swaylock -f -c 000000
+
+# put the system to sleep
+bindsym $mod+Shift+o exec systemctl suspend
+
+bindsym $mod+j exec nautilus
+
+# resize window (you can also use the mouse for that)
+mode "resize" {
+        # These bindings trigger as soon as you enter the resize mode
+
+        # same bindings, but for the arrow keys
+        bindsym Left resize shrink width 6 px or 6 ppt
+        bindsym Down resize grow height 6 px or 6 ppt
+        bindsym Up resize shrink height 6 px or 6 ppt
+        bindsym Right resize grow width 6 px or 6 ppt
+
+        # back to normal: Enter or Escape
+        bindsym Return mode "default"
+        bindsym Escape mode "default"
+}
+bindsym $mod+r mode "resize"
+
+# Disable titlebar
+#new_window pixel 1
+#new_float pixel 1
+
+#smart_gaps on
+
+# Window Border color
+#client.focused          #002b36 #586e75 #fdf6e3 #268bd2
+#client.focused_inactive #002b36 #073642 #839496 #073642
+#client.unfocused        #002b36 #073642 #839496 #073642
+#client.urgent           #002b36 #dc322f #fdf6e3 #002b36
+
+# Enable popup during fullscreen
+popup_during_fullscreen smart
+
+focus_follows_mouse yes
+
+# Configure the bar
+#bar {
+#  font pango:Ubuntu Mono 10
+#  separator_symbol " "
+#  status_command i3blocks
+##  tray_output none
+#
+#  colors {
+#      background #1d1f21
+#      statusline $base1
+#      separator  $blue
+##                        BORDER  BACKGROUND TEXT
+#      focused_workspace  #404347  #404347  $base2
+#      active_workspace   $base02  #1d1f21  $base01
+#      inactive_workspace $base03  #1d1f21  $base01
+#      urgent_workspace   $red     $red     $base3
+#  }
+#}
+
+# Media player controls
+bindsym XF86AudioPlay exec playerctl -p mpd play-pause
+bindsym XF86AudioNext exec playerctl -p mpd next
+bindsym XF86AudioPrev exec playerctl -p mpd previous
+
+bindsym XF86AudioRaiseVolume exec pactl set-sink-volume @DEFAULT_SINK@ +2%
+bindsym XF86AudioLowerVolume exec pactl set-sink-volume @DEFAULT_SINK@ -2%
+
+bindsym XF86MonBrightnessUp exec brightnessctl set +2%
+bindsym XF86MonBrightnessDown exec brightnessctl set 2%-
+
+bindsym Print exec grim "$HOME/pictures/screenshot-$(date +%Y-%m-%d_%H-%M-%S).png"
+bindsym Shift+Print exec grim -g "$(slurp)" "$HOME/pictures/screenshot-$(date +%Y-%m-%d_%H-%M-%S).png"
+
+input type:keyboard {
+    xkb_layout gb
+    xkb_variant dvorak
+    xkb_options ctrl:nocaps
+}
+
+input type:touchpad {
+    tap enabled
+    accel_profile adaptive
+    #pointer_accel 0.25
+}
+
+default_border pixel 2
+
+exec --no-startup-id /usr/bin/gnome-keyring-daemon --start --components=ssh&
+exec --no-startup-id /usr/bin/gnome-keyring-daemon --start --components=secrets&
+exec --no-startup-id /usr/bin/gnome-keyring-daemon --start --components=pkcs11&
+exec --no-startup-id /usr/bin/mako --anchor bottom-right --max-visible 2 --default-timeout 3000 &
+exec --no-startup-id /usr/bin/swayidle -w timeout 600 'swaylock -f -c 000000' timeout 600 'swaymsg "output * dpms off"' resume 'swaymsg "output * dpms on"' before-sleep 'swaylock -f -c 000000' &
+exec --no-startup-id /usr/bin/nm-applet --indicator &
+exec --no-startup-id /usr/bin/waybar &
+exec --no-startup-id /usr/bin/gammastep -l 51.5:-1.87 -t 6500:3000 &
+
+exec systemctl --user import-environment DISPLAY WAYLAND_DISPLAY SWAYSOCK MOZ_DBUS_REMOTE
+exec hash dbus-update-activation-environment 2>/dev/null && \
+    dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY SWAYSOCK MOZ_DBUS_REMOTE
+
+#exec xrdb ~/.Xresources
+
+# It's 2020 guys.
+    #xwayland disable
