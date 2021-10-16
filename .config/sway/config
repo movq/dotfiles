@@ -1,30 +1,6 @@
-# i3 config file (v4) for Regolith Desktop Environment
-#
-# Please see http://i3wm.org/docs/userguide.html for a complete reference!
-
 # This defines which key super maps to on your keyboard.  
 # Alt key is Mod1, and Windows key is Mod4
 set $mod Mod4
-
-# This is the Solarized color palette.
-set $base03    #002b36
-set $base02    #073642
-set $base01    #586e75
-set $base00    #657b83
-set $base0     #839496
-set $base1     #93a1a1
-set $base2     #eee8d5
-set $base3     #fdf6e3
-set $yellow    #b58900
-set $orange    #cb4b10
-set $red       #dc322f
-set $magenta   #d33682
-set $violet    #6c71c4
-set $blue      #268bd2
-set $cyan      #2aa198
-set $green     #859900
-set $transparent #00000000
-set $lucent    #00000088
 
 # This is the labels which describe each i3 workspace.
 set $ws1   " 1 "
@@ -207,43 +183,13 @@ mode "resize" {
         bindsym Return mode "default"
         bindsym Escape mode "default"
 }
+
 bindsym $mod+r mode "resize"
-
-# Disable titlebar
-#new_window pixel 1
-#new_float pixel 1
-
-#smart_gaps on
-
-# Window Border color
-#client.focused          #002b36 #586e75 #fdf6e3 #268bd2
-#client.focused_inactive #002b36 #073642 #839496 #073642
-#client.unfocused        #002b36 #073642 #839496 #073642
-#client.urgent           #002b36 #dc322f #fdf6e3 #002b36
 
 # Enable popup during fullscreen
 popup_during_fullscreen smart
 
 focus_follows_mouse yes
-
-# Configure the bar
-#bar {
-#  font pango:Ubuntu Mono 10
-#  separator_symbol " "
-#  status_command i3blocks
-##  tray_output none
-#
-#  colors {
-#      background #1d1f21
-#      statusline $base1
-#      separator  $blue
-##                        BORDER  BACKGROUND TEXT
-#      focused_workspace  #404347  #404347  $base2
-#      active_workspace   $base02  #1d1f21  $base01
-#      inactive_workspace $base03  #1d1f21  $base01
-#      urgent_workspace   $red     $red     $base3
-#  }
-#}
 
 # Media player controls
 bindsym XF86AudioPlay exec playerctl -p mpd play-pause
@@ -268,7 +214,7 @@ input type:keyboard {
 input type:touchpad {
     tap enabled
     accel_profile adaptive
-    #pointer_accel 0.25
+    # pointer_accel 0.25
 }
 
 default_border pixel 2
@@ -285,8 +231,3 @@ exec --no-startup-id /usr/bin/gammastep -l 51.5:-1.87 -t 6500:3000 &
 exec systemctl --user import-environment DISPLAY WAYLAND_DISPLAY SWAYSOCK MOZ_DBUS_REMOTE
 exec hash dbus-update-activation-environment 2>/dev/null && \
     dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY SWAYSOCK MOZ_DBUS_REMOTE
-
-#exec xrdb ~/.Xresources
-
-# It's 2020 guys.
-    #xwayland disable
