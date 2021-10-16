@@ -5,6 +5,7 @@ return require("packer").startup(
         use "wbthomason/packer.nvim"
 
         use "morhetz/gruvbox"
+        use "nanotech/jellybeans.vim"
 
         use {
             "kyazdani42/nvim-tree.lua",
@@ -14,12 +15,14 @@ return require("packer").startup(
             end
         }
 
-        use "neovim/nvim-lspconfig"
+        use "junegunn/fzf.vim"
 
         use {
             "romgrk/barbar.nvim",
             requires = {"kyazdani42/nvim-web-devicons"}
         }
+
+        use "neovim/nvim-lspconfig"
 
         use {
             "hrsh7th/nvim-cmp",

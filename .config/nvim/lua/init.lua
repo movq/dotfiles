@@ -22,7 +22,7 @@ require "nvim-tree".setup {
     -- hijack the cursor in the tree to put it at the start of the filename
     hijack_cursor = false,
     -- updates the root directory of the tree on `DirChanged` (when your run `:cd` usually)
-    update_cwd = false,
+    update_cwd = true,
     -- update the focused file on `BufEnter`, un-collapses the folders recursively until it finds the file
     update_focused_file = {
         -- enables the feature
@@ -59,8 +59,8 @@ require "nvim-tree".setup {
         }
     }
 }
-local cmp = require "cmp"
 
+local cmp = require "cmp"
 cmp.setup(
     {
         snippet = {
@@ -82,6 +82,17 @@ cmp.setup(
 )
 
 local nvim_lsp = require("lspconfig")
+
+nvim_lsp.clangd.setup {
+    capabilities = require("cmp_nvim_lsp").update_capabilities(vim.lsp.protocol.make_client_capabilities())
+}
+nvim_lsp.rust_analyzer.setup {
+    capabilities = require("cmp_nvim_lsp").update_capabilities(vim.lsp.protocol.make_client_capabilities())
+}
+nvim_lsp.pyright.setup {
+    capabilities = require("cmp_nvim_lsp").update_capabilities(vim.lsp.protocol.make_client_capabilities())
+}
+
 -- Use an on_attach function to only map the following keys
 -- after the language server attaches to the current buffer
 local on_attach = function(client, bufnr)
@@ -120,7 +131,7 @@ end
 
 -- Use a loop to conveniently call 'setup' on multiple servers and
 -- map buffer local keybindings when the language server attaches
-local servers = {"clangd"}
+local servers = {"clangd", "rust_analyzer", "pyright"}
 for _, lsp in ipairs(servers) do
     nvim_lsp[lsp].setup {
         on_attach = on_attach,
@@ -129,7 +140,3 @@ for _, lsp in ipairs(servers) do
         }
     }
 end
-
-require "lspconfig".clangd.setup {
-    capabilities = require("cmp_nvim_lsp").update_capabilities(vim.lsp.protocol.make_client_capabilities())
-}

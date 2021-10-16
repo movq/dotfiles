@@ -21,6 +21,10 @@ nnoremap <C-n> :NvimTreeToggle<CR>
 nnoremap <leader>r :NvimTreeRefresh<CR>
 nnoremap <leader>n :NvimTreeFindFile<CR>
 
+nnoremap <C-p> :Files<CR>
+nnoremap <leader>p :Buffers<CR>
+
+let g:gruvbox_contrast_dark = 'hard'
 colorscheme gruvbox
 
 set number
@@ -33,3 +37,6 @@ set wildmenu
 set completeopt=menu,menuone,noselect
 set mouse=a
 set clipboard+=unnamedplus
+set hidden
+
+autocmd FileType text lua require 'cmp'.setup.buffer { sources = {} }
