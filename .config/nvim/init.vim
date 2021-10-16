@@ -41,3 +41,6 @@ set clipboard+=unnamedplus
 set hidden
 
 autocmd FileType text lua require 'cmp'.setup.buffer { sources = {} }
+
+highlight NvimTreeSpecialFile guifg='#f0c674'
+highlight NvimTreeRootFolder guifg='#b294bb'
