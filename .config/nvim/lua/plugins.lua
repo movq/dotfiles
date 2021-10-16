@@ -3,9 +3,7 @@ vim.cmd [[packadd packer.nvim]]
 return require("packer").startup(
     function()
         use "wbthomason/packer.nvim"
-        use "morhetz/gruvbox"
         use "movq/nvim-base16"
-        use "nanotech/jellybeans.vim"
         use {
             "kyazdani42/nvim-tree.lua",
             requires = "kyazdani42/nvim-web-devicons",

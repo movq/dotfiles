@@ -133,7 +133,7 @@ local runtime_path = vim.split(package.path, ";")
 table.insert(runtime_path, "lua/?.lua")
 table.insert(runtime_path, "lua/?/init.lua")
 nvim_lsp["sumneko_lua"].setup {
-    cmd = {vim.env.HOME .. "/src/lua-language-server/bin/Linux/lua-language-server"},
+    cmd = {"lua-language-server", "-E", vim.env.HOME .. "/.local/share/lua-language-server/main.lua"},
     settings = {
         Lua = {
             runtime = {
@@ -155,5 +155,10 @@ nvim_lsp["sumneko_lua"].setup {
                 enable = false
             }
         }
-    }
+    },
+    on_attach = on_attach,
+    flags = {
+        debounce_text_changes = 150
+    },
+    capabilities = require("cmp_nvim_lsp").update_capabilities(vim.lsp.protocol.make_client_capabilities())
 }
