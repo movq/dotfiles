@@ -3,10 +3,9 @@ vim.cmd [[packadd packer.nvim]]
 return require("packer").startup(
     function()
         use "wbthomason/packer.nvim"
-
         use "morhetz/gruvbox"
+        use "RRethy/nvim-base16"
         use "nanotech/jellybeans.vim"
-
         use {
             "kyazdani42/nvim-tree.lua",
             requires = "kyazdani42/nvim-web-devicons",
@@ -14,16 +13,12 @@ return require("packer").startup(
                 require "nvim-tree".setup {}
             end
         }
-
         use "junegunn/fzf.vim"
-
         use {
             "romgrk/barbar.nvim",
             requires = {"kyazdani42/nvim-web-devicons"}
         }
-
         use "neovim/nvim-lspconfig"
-
         use {
             "hrsh7th/nvim-cmp",
             requires = {
@@ -35,5 +30,6 @@ return require("packer").startup(
             config = function()
             end
         }
+        use "nvim-lua/lsp-status.nvim"
     end
 )

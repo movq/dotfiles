@@ -92,6 +92,9 @@ nvim_lsp.rust_analyzer.setup {
 nvim_lsp.pyright.setup {
     capabilities = require("cmp_nvim_lsp").update_capabilities(vim.lsp.protocol.make_client_capabilities())
 }
+nvim_lsp.tsserver.setup {
+    capabilities = require("cmp_nvim_lsp").update_capabilities(vim.lsp.protocol.make_client_capabilities())
+}
 
 -- Use an on_attach function to only map the following keys
 -- after the language server attaches to the current buffer
