@@ -24,6 +24,9 @@ nnoremap <leader>n :NvimTreeFindFile<CR>
 nnoremap <C-p> :Files<CR>
 nnoremap <leader>p :Buffers<CR>
 
+nnoremap <leader>. :BufferPrevious<CR>
+nnoremap <leader>p :BufferNext<CR>
+
 "let g:gruvbox_contrast_dark = 'hard'
 "colorscheme gruvbox
 colorscheme base16-tomorrow-night
