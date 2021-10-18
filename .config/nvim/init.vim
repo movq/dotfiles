@@ -24,8 +24,8 @@ nnoremap <leader>n :NvimTreeFindFile<CR>
 nnoremap <C-p> :Files<CR>
 nnoremap <leader>p :Buffers<CR>
 
-nnoremap <leader>. :BufferPrevious<CR>
-nnoremap <leader>p :BufferNext<CR>
+nnoremap <leader>a :BufferPrevious<CR>
+nnoremap <leader>o :BufferNext<CR>
 
 "let g:gruvbox_contrast_dark = 'hard'
 "colorscheme gruvbox
@@ -44,6 +44,9 @@ set clipboard+=unnamedplus
 set hidden
 
 autocmd FileType text lua require 'cmp'.setup.buffer { sources = {} }
+
+highlight ExtraWhitespace guibg=red
+match ExtraWhitespace /\s\+$/
 
 highlight NvimTreeSpecialFile guifg='#f0c674'
 highlight NvimTreeRootFolder guifg='#b294bb'
