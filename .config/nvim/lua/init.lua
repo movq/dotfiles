@@ -162,3 +162,21 @@ nvim_lsp["sumneko_lua"].setup {
     },
     capabilities = require("cmp_nvim_lsp").update_capabilities(vim.lsp.protocol.make_client_capabilities())
 }
+
+require'nvim-treesitter.configs'.setup {
+    ensure_installed = {
+        "c", "cpp", "rust", "cmake", "cuda", "go", "javascript", "lua",
+        "python", "typescript", "vim", "yaml"
+    },
+    highlight = {
+        enable = true,
+        additional_vim_regex_highlighting = false,
+  },
+}
+
+require('base16-colorscheme').setup({
+    base00 = '#16161d', base01 = '#282a2e', base02 = '#373b41', base03 = '#969896',
+    base04 = '#b4b7b4', base05 = '#c5c8c6', base06 = '#e0e0e0', base07 = '#ffffff',
+    base08 = '#de935f', base09 = '#cc6666', base0A = '#f0c674', base0B = '#b5bd68',
+    base0C = '#8abeb7', base0D = '#81a2be', base0E = '#b294bb', base0F = '#a3685a',
+})

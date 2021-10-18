@@ -29,5 +29,6 @@ return require("packer").startup(
             end
         }
         use "nvim-lua/lsp-status.nvim"
+        use "nvim-treesitter/nvim-treesitter"
     end
 )

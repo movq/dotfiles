@@ -29,7 +29,7 @@ nnoremap <leader>o :BufferNext<CR>
 
 "let g:gruvbox_contrast_dark = 'hard'
 "colorscheme gruvbox
-colorscheme base16-tomorrow-night
+"colorscheme base16-tomorrow-night
 
 set number
 set termguicolors
@@ -50,3 +50,5 @@ match ExtraWhitespace /\s\+$/
 
 highlight NvimTreeSpecialFile guifg='#f0c674'
 highlight NvimTreeRootFolder guifg='#b294bb'
+
+let $FZF_DEFAULT_COMMAND='fd --type f'
