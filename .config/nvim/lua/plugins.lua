@@ -1,7 +1,7 @@
 vim.cmd [[packadd packer.nvim]]
 
 return require("packer").startup(
-    function()
+    function(use)
         use "wbthomason/packer.nvim"
         use "movq/nvim-base16"
         use {
@@ -25,10 +25,18 @@ return require("packer").startup(
                 "hrsh7th/cmp-buffer",
                 "hrsh7th/nvim-cmp"
             },
-            config = function()
-            end
         }
         use "nvim-lua/lsp-status.nvim"
         use "nvim-treesitter/nvim-treesitter"
+        use {
+            "nvim-telescope/telescope.nvim",
+            requires = {"nvim-lua/plenary.nvim"}
+        }
+        use {
+            "WhoIsSethDaniel/toggle-lsp-diagnostics.nvim",
+            config = function()
+                require('toggle_lsp_diagnostics').init()
+            end
+        }
     end
 )

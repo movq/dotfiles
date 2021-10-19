@@ -21,11 +21,13 @@ nnoremap <C-n> :NvimTreeToggle<CR>
 nnoremap <leader>r :NvimTreeRefresh<CR>
 nnoremap <leader>n :NvimTreeFindFile<CR>
 
-nnoremap <C-p> :Files<CR>
-nnoremap <leader>p :Buffers<CR>
+nnoremap <C-p> :Telescope find_files<CR>
+nnoremap <leader>p :Telescope buffers<CR>
 
 nnoremap <leader>a :BufferPrevious<CR>
 nnoremap <leader>o :BufferNext<CR>
+
+nmap <leader>tld <Plug>(toggle-lsp-diag)
 
 "let g:gruvbox_contrast_dark = 'hard'
 "colorscheme gruvbox
