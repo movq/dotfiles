@@ -38,5 +38,11 @@ return require("packer").startup(
                 require('toggle_lsp_diagnostics').init()
             end
         }
+        use {
+            "famiu/feline.nvim",
+            config = function()
+                require("feline").setup()
+            end
+        }
     end
 )

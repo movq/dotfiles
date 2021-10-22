@@ -17,7 +17,7 @@ map <C-n> <C-w>j
 map <C-t> <C-w>k
 map <C-s> <C-w>l
 
-nnoremap <C-n> :NvimTreeToggle<CR>
+nnoremap <C-e> :NvimTreeToggle<CR>
 nnoremap <leader>r :NvimTreeRefresh<CR>
 nnoremap <leader>n :NvimTreeFindFile<CR>
 
@@ -25,7 +25,7 @@ nnoremap <C-p> :Telescope find_files<CR>
 nnoremap <leader>p :Telescope buffers<CR>
 
 nnoremap <leader>a :BufferPrevious<CR>
-nnoremap <leader>o :BufferNext<CR>
+nnoremap <leader>e :BufferNext<CR>
 
 nmap <leader>tld <Plug>(toggle-lsp-diag)
 
@@ -44,6 +44,8 @@ set completeopt=menu,menuone,noselect
 set mouse=a
 set clipboard+=unnamedplus
 set hidden
+set cursorline
+set nohlsearch
 
 autocmd FileType text lua require 'cmp'.setup.buffer { sources = {} }
 
