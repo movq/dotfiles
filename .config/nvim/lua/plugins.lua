@@ -39,9 +39,19 @@ return require("packer").startup(
             end
         }
         use {
-            "famiu/feline.nvim",
+            "lewis6991/gitsigns.nvim",
             config = function()
-                require("feline").setup()
+                require("gitsigns").setup()
+            end
+        }
+        use {
+            "famiu/feline.nvim",
+            -- requires = {"lewis6991/gitsigns.nvim"},
+            config = function()
+                local components = require('plugin_config.feline')
+                require("feline").setup({
+                    components = components,
+                })
             end
         }
     end
