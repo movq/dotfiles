@@ -29,10 +29,6 @@ nnoremap <leader>e :BufferNext<CR>
 
 nmap <leader>tld <Plug>(toggle-lsp-diag)
 
-"let g:gruvbox_contrast_dark = 'hard'
-"colorscheme gruvbox
-"colorscheme base16-tomorrow-night
-
 set number
 set termguicolors
 set tabstop=4
@@ -54,5 +50,3 @@ match ExtraWhitespace /\s\+$/
 
 highlight NvimTreeSpecialFile guifg='#f0c674'
 highlight NvimTreeRootFolder guifg='#b294bb'
-
-let $FZF_DEFAULT_COMMAND='fd --type f'

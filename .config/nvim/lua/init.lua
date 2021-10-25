@@ -118,14 +118,14 @@ end
 
 -- Use a loop to conveniently call 'setup' on multiple servers and
 -- map buffer local keybindings when the language server attaches
-local servers = {"clangd", "rust_analyzer", "pyright", "tsserver", "gopls", "sumneko_lua"}
+local servers = {"clangd", "rust_analyzer", "pyright", "tsserver", "gopls", "sumneko_lua", "hls"}
 for _, lsp in ipairs(servers) do
     nvim_lsp[lsp].setup {
         on_attach = on_attach,
         flags = {
             debounce_text_changes = 150
         },
-        capabilities = require("cmp_nvim_lsp").update_capabilities(vim.lsp.protocol.make_client_capabilities())
+        capabilities = require("cmp_nvim_lsp").update_capabilities(vim.lsp.protocol.make_client_capabilities()),
     }
 end
 
@@ -158,7 +158,7 @@ nvim_lsp["sumneko_lua"].setup {
     },
     on_attach = on_attach,
     flags = {
-        debounce_text_changes = 150
+        debounce_text_changes = 150,
     },
     capabilities = require("cmp_nvim_lsp").update_capabilities(vim.lsp.protocol.make_client_capabilities())
 }
@@ -166,7 +166,7 @@ nvim_lsp["sumneko_lua"].setup {
 require'nvim-treesitter.configs'.setup {
     ensure_installed = {
         "c", "cpp", "rust", "cmake", "cuda", "go", "javascript", "lua",
-        "python", "typescript", "vim", "yaml"
+        "python", "typescript", "vim", "yaml", "haskell"
     },
     highlight = {
         enable = true,

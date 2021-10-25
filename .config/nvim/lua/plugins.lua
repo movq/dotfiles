@@ -11,11 +11,8 @@ return require("packer").startup(
                 require "nvim-tree".setup {}
             end
         }
-        use "junegunn/fzf.vim"
-        use {
-            "romgrk/barbar.nvim",
-            requires = {"kyazdani42/nvim-web-devicons"}
-        }
+        use "kyazdani42/nvim-web-devicons"
+        use "romgrk/barbar.nvim"
         use "neovim/nvim-lspconfig"
         use {
             "hrsh7th/nvim-cmp",
@@ -35,7 +32,9 @@ return require("packer").startup(
         use {
             "WhoIsSethDaniel/toggle-lsp-diagnostics.nvim",
             config = function()
-                require('toggle_lsp_diagnostics').init()
+                require('toggle_lsp_diagnostics').init({
+                    update_in_insert = false,
+                })
             end
         }
         use {
@@ -46,7 +45,6 @@ return require("packer").startup(
         }
         use {
             "famiu/feline.nvim",
-            -- requires = {"lewis6991/gitsigns.nvim"},
             config = function()
                 local components = require('plugin_config.feline')
                 require("feline").setup({
