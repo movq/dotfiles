@@ -1,27 +1,24 @@
-# This defines which key super maps to on your keyboard.  
-# Alt key is Mod1, and Windows key is Mod4
 set $mod Mod4
 
-# This is the labels which describe each i3 workspace.
-set $ws1   " 1 "
-set $ws2   " 2 "
-set $ws3   " 3 "
-set $ws4   " 4 "
-set $ws5   " 5 "
-set $ws6   " 6 "
-set $ws7   " 7 "
-set $ws8   " 8 "
-set $ws9   " 9 "
-set $ws10  "10 "
-set $ws11  "11 "
-set $ws12  "12 "
-set $ws13  "13 "
-set $ws14  "14 "
-set $ws15  "15 "
-set $ws16  "16 "
-set $ws17  "17 "
-set $ws18  "18 "
-set $ws19  "19 "
+set $ws1   "1"
+set $ws2   "2"
+set $ws3   "3"
+set $ws4   "4"
+set $ws5   "5"
+set $ws6   "6"
+set $ws7   "7"
+set $ws8   "8"
+set $ws9   "9"
+set $ws10  "10"
+set $ws11  "11"
+set $ws12  "12"
+set $ws13  "13"
+set $ws14  "14"
+set $ws15  "15"
+set $ws16  "16"
+set $ws17  "17"
+set $ws18  "18"
+set $ws19  "19"
 
 font pango:Ubuntu Regular 10
 
@@ -167,7 +164,7 @@ bindsym $mod+Escape exec swaylock -f -c 000000
 # put the system to sleep
 bindsym $mod+Shift+o exec systemctl suspend
 
-bindsym $mod+j exec nautilus
+bindsym $mod+j exec thunar
 
 # resize window (you can also use the mouse for that)
 mode "resize" {
@@ -225,9 +222,10 @@ exec --no-startup-id /usr/bin/gnome-keyring-daemon --start --components=pkcs11&
 exec --no-startup-id /usr/bin/mako --anchor bottom-right --max-visible 2 --default-timeout 3000 &
 exec --no-startup-id /usr/bin/swayidle -w timeout 600 'swaylock -f -c 000000' timeout 600 'swaymsg "output * dpms off"' resume 'swaymsg "output * dpms on"' before-sleep 'swaylock -f -c 000000' &
 exec --no-startup-id /usr/bin/nm-applet --indicator &
-exec --no-startup-id /usr/bin/waybar &
+exec --no-startup-id GTK_USE_PORTAL=0 /usr/bin/waybar &
 exec --no-startup-id /usr/bin/gammastep -l 51.5:-1.87 -t 6500:3000 &
+exec --no-startup-id /usr/bin/blueman-applet &
 
-exec systemctl --user import-environment DISPLAY WAYLAND_DISPLAY SWAYSOCK MOZ_DBUS_REMOTE
+exec systemctl --user import-environment DISPLAY WAYLAND_DISPLAY SWAYSOCK MOZ_DBUS_REMOTE XDG_CURRENT_DESKTOP
 exec hash dbus-update-activation-environment 2>/dev/null && \
-    dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY SWAYSOCK MOZ_DBUS_REMOTE
+    dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY SWAYSOCK MOZ_DBUS_REMOTE XDG_CURRENT_DESKTOP
