@@ -20,7 +20,7 @@ set $ws17  "17"
 set $ws18  "18"
 set $ws19  "19"
 
-font pango:Ubuntu Regular 10
+font pango:Ubuntu 12
 
 # Invisible workspace
 set $ws20 " "
@@ -31,7 +31,7 @@ floating_modifier $mod
 hide_edge_borders smart
 
 # start a terminal
-bindsym $mod+Return exec alacritty -e fish&
+bindsym $mod+Return exec foot fish
 
 # start a web browser
 bindsym $mod+Shift+Return exec firefox&
@@ -159,7 +159,7 @@ bindsym $mod+Shift+P restart
 bindsym $mod+Shift+period exit
 
 # lock the screen
-bindsym $mod+Escape exec swaylock -f -c 000000
+bindsym $mod+Escape exec swaylock -f -i "$HOME/pictures/dusk.png"
 
 # put the system to sleep
 bindsym $mod+Shift+o exec systemctl suspend
@@ -216,16 +216,19 @@ input type:touchpad {
 
 default_border pixel 2
 
-exec --no-startup-id /usr/bin/gnome-keyring-daemon --start --components=ssh&
-exec --no-startup-id /usr/bin/gnome-keyring-daemon --start --components=secrets&
-exec --no-startup-id /usr/bin/gnome-keyring-daemon --start --components=pkcs11&
-exec --no-startup-id /usr/bin/mako --anchor bottom-right --max-visible 2 --default-timeout 3000 &
-exec --no-startup-id /usr/bin/swayidle -w timeout 600 'swaylock -f -c 000000' timeout 600 'swaymsg "output * dpms off"' resume 'swaymsg "output * dpms on"' before-sleep 'swaylock -f -c 000000' &
-exec --no-startup-id /usr/bin/nm-applet --indicator &
-exec --no-startup-id GTK_USE_PORTAL=0 /usr/bin/waybar &
-exec --no-startup-id /usr/bin/gammastep -l 51.5:-1.87 -t 6500:3000 &
-exec --no-startup-id /usr/bin/blueman-applet &
+exec /usr/bin/gnome-keyring-daemon --start --components=secrets&
+exec /usr/bin/gnome-keyring-daemon --start --components=ssh&
+exec /usr/bin/gnome-keyring-daemon --start --components=pkcs11&
+exec /usr/bin/mako --anchor bottom-right --max-visible 2 --default-timeout 3000 &
+exec /usr/bin/swayidle -w timeout 600 'swaylock -f -i $HOME/pictures/dusk.png' timeout 600 'swaymsg "output * dpms off"' resume 'swaymsg "output * dpms on"' before-sleep 'swaylock -f -i $HOME/pictures/dusk.png' &
+exec waybar &
+exec gammastep -l 51.5:-1.87 -t 6500:3000 &
+exec xsettingsd &
+exec pipewire &
+exec pipewire-pulse &
 
-exec systemctl --user import-environment DISPLAY WAYLAND_DISPLAY SWAYSOCK MOZ_DBUS_REMOTE XDG_CURRENT_DESKTOP
+#exec systemctl --user import-environment DISPLAY WAYLAND_DISPLAY SWAYSOCK MOZ_DBUS_REMOTE XDG_CURRENT_DESKTOP
 exec hash dbus-update-activation-environment 2>/dev/null && \
     dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY SWAYSOCK MOZ_DBUS_REMOTE XDG_CURRENT_DESKTOP
+
+output "*" bg "$HOME/pictures/dusk.png" fill
