@@ -159,12 +159,14 @@ bindsym $mod+Shift+P restart
 bindsym $mod+Shift+period exit
 
 # lock the screen
-bindsym $mod+Escape exec swaylock -f -i "$HOME/pictures/dusk.png"
+bindsym $mod+Escape exec swaylock -f
 
 # put the system to sleep
-bindsym $mod+Shift+o exec systemctl suspend
+bindsym $mod+Shift+o exec sudo zzz
 
 bindsym $mod+j exec thunar
+
+bindsym $mod+apostrophe exec makoctl dismiss -a
 
 # resize window (you can also use the mouse for that)
 mode "resize" {
@@ -216,11 +218,11 @@ input type:touchpad {
 
 default_border pixel 2
 
-exec /usr/bin/gnome-keyring-daemon --start --components=secrets&
-exec /usr/bin/gnome-keyring-daemon --start --components=ssh&
-exec /usr/bin/gnome-keyring-daemon --start --components=pkcs11&
-exec /usr/bin/mako --anchor bottom-right --max-visible 2 --default-timeout 3000 &
-exec /usr/bin/swayidle -w timeout 600 'swaylock -f -i $HOME/pictures/dusk.png' timeout 600 'swaymsg "output * dpms off"' resume 'swaymsg "output * dpms on"' before-sleep 'swaylock -f -i $HOME/pictures/dusk.png' &
+exec gnome-keyring-daemon --start --components=secrets&
+exec gnome-keyring-daemon --start --components=ssh&
+exec gnome-keyring-daemon --start --components=pkcs11&
+exec mako &
+exec swayidle -w timeout 600 'swaylock -f' timeout 600 'swaymsg "output * dpms off"' resume 'swaymsg "output * dpms on"' before-sleep 'swaylock -f' &
 exec waybar &
 exec gammastep -l 51.5:-1.87 -t 6500:3000 &
 exec xsettingsd &
