@@ -51,8 +51,8 @@
 
 /* The whole bar */
 #waybar {
-    background: #323232;
-    color: white;
+    background: #000000;
+    color: #c0c0c0;
 }
 
 /* Each module */
@@ -67,8 +67,11 @@
 #idle_inhibitor,
 #temperature,
 #tray {
-    padding-left: 10px;
-    padding-right: 10px;
+    margin: 3px 6px;
+    background-color: #303030;
+    padding-left: 8px;
+    padding-right: 8px;
+    border-radius: 8px;
 }
 
 
@@ -80,7 +83,6 @@
     animation-timing-function: linear;
     animation-iteration-count: infinite;
     animation-direction: alternate;
-    color: #8abeb7;
 }
 
 #battery.warning {
@@ -102,10 +104,19 @@
 }
 
 #clock {
+    margin: 3px 0;
+}
+
+#clock.date {
+    padding-left: 3px;
+    border-radius: 8px 0 0 8px;
+}
+
+#clock.time {
+    border-radius: 0 8px 8px 0;
 }
 
 #cpu {
-  color: #b5bd68;
   /* No styles */
 }
 
@@ -121,7 +132,6 @@
     animation-timing-function: linear;
     animation-iteration-count: infinite;
     animation-direction: alternate;
-    color: #f0c674;
 }
 
 #memory.warning {
@@ -139,7 +149,6 @@
 }
 
 #network {
-    color: #cc6666;
     /* No styles */
 }
 
@@ -148,7 +157,6 @@
 }
 
 #pulseaudio {
-    color: #81a2be;
     /* No styles */
 }
 
@@ -173,7 +181,6 @@
 }
 
 #idle_inhibitor {
-    color: #b294bb;
 }
 
 #workspaces button {
@@ -181,12 +188,14 @@
     color: #888888;
     padding-left: 10px;
     padding-right: 10px;
+    margin: 3px 2px;
 }
 
 #workspaces button.focused {
     border-color: #4c7899;
     color: black;
-    background-color: #b5bd68
+    background-color: #808080;
+    border-radius: 8px;
 }
 
 #workspaces button.urgent {

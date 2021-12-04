@@ -238,4 +238,4 @@ exec hash dbus-update-activation-environment 2>/dev/null && \
 output "*" bg "$HOME/pictures/dusk.png" fill
 seat seat0 xcursor_theme Adwaita
 
-client.focused #4c7899 #5f819d #000000
+client.focused #303030 #505050 #000000
