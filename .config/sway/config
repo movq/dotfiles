@@ -20,7 +20,7 @@ set $ws17  "17"
 set $ws18  "18"
 set $ws19  "19"
 
-font pango:Ubuntu 12
+font pango:Ubuntu Bold 12
 
 # Invisible workspace
 set $ws20 " "
@@ -40,7 +40,7 @@ bindsym $mod+Shift+Return exec firefox&
 bindsym $mod+Shift+apostrophe kill
 
 # rofi app and window launchers
-bindsym $mod+e exec wofi --show drun -i
+bindsym $mod+e exec wofi --show drun -i -I
 bindsym $mod+Shift+e exec wofi --show run
 
 # change focus
@@ -164,7 +164,7 @@ bindsym $mod+Escape exec swaylock -f
 # put the system to sleep
 bindsym $mod+Shift+o exec sudo zzz
 
-bindsym $mod+j exec thunar
+bindsym $mod+j exec pcmanfm-qt
 
 bindsym $mod+apostrophe exec makoctl dismiss -a
 
@@ -198,16 +198,18 @@ bindsym XF86AudioPrev exec playerctl -p mpd previous
 bindsym XF86AudioRaiseVolume exec pactl set-sink-volume @DEFAULT_SINK@ +2%
 bindsym XF86AudioLowerVolume exec pactl set-sink-volume @DEFAULT_SINK@ -2%
 
-bindsym XF86MonBrightnessUp exec brightnessctl set +2%
-bindsym XF86MonBrightnessDown exec brightnessctl set 2%-
+bindsym XF86MonBrightnessUp exec brightnessctl set +1%
+bindsym XF86MonBrightnessDown exec brightnessctl set 1%-
 
 bindsym Print exec grim "$HOME/pictures/screenshot-$(date +%Y-%m-%d_%H-%M-%S).png"
 bindsym Shift+Print exec grim -g "$(slurp)" "$HOME/pictures/screenshot-$(date +%Y-%m-%d_%H-%M-%S).png"
 
+for_window [app_id="pcmanfm-qt" title="Mount"] floating enable
+
 input type:keyboard {
     xkb_layout gb
     xkb_variant dvorak
-    xkb_options ctrl:nocaps
+    xkb_options ctrl:swapcaps
 }
 
 input type:touchpad {
@@ -226,11 +228,14 @@ exec swayidle -w timeout 600 'swaylock -f' timeout 600 'swaymsg "output * dpms o
 exec waybar &
 exec gammastep -l 51.5:-1.87 -t 6500:3000 &
 exec xsettingsd &
-exec pipewire &
-exec pipewire-pulse &
+#exec pipewire &
+#exec pipewire-pulse &
 
-#exec systemctl --user import-environment DISPLAY WAYLAND_DISPLAY SWAYSOCK MOZ_DBUS_REMOTE XDG_CURRENT_DESKTOP
+exec systemctl --user import-environment DISPLAY WAYLAND_DISPLAY SWAYSOCK MOZ_DBUS_REMOTE XDG_CURRENT_DESKTOP
 exec hash dbus-update-activation-environment 2>/dev/null && \
     dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY SWAYSOCK MOZ_DBUS_REMOTE XDG_CURRENT_DESKTOP
 
 output "*" bg "$HOME/pictures/dusk.png" fill
+seat seat0 xcursor_theme Adwaita
+
+client.focused #4c7899 #5f819d #000000
