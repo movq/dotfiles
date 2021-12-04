@@ -1,0 +1,69 @@
+app-crypt/gcr gtk
+app-crypt/pinentry gtk
+app-editors/emacs cairo dynamic-loading gtk gui harfbuzz toolkit-scroll-bars xft
+app-emacs/emacs-common gui
+app-emulation/libvirt firewalld
+app-emulation/podman btrfs
+app-emulation/virt-manager gtk
+app-text/poppler cairo
+app-text/xmlto text
+dev-cpp/gtkmm X
+dev-lang/rust system-bootstrap system-llvm rustfmt rust-src rls
+dev-libs/boost icu
+dev-libs/libpcre2 pcre32
+dev-libs/libxml2 icu
+dev-qt/qtgui X egl jpeg
+gnome-base/gnome-shell -browser-extension
+gnome-base/gvfs udisks
+gui-apps/waybar network
+gui-libs/wlroots X
+gui-wm/sway X
+media-fonts/fontawesome ttf
+media-libs/freetype harfbuzz
+media-libs/harfbuzz icu
+media-libs/imlib2 X
+media-libs/libcanberra alsa
+media-libs/libepoxy X
+media-libs/libglvnd X
+media-libs/libopenraw gtk
+media-libs/libpng apng
+media-libs/libv4l jpeg
+media-libs/libvpx postproc
+media-libs/mesa X -llvm
+media-sound/kid3 flac mp3 vorbis
+media-sound/pulseaudio bluetooth native-headset
+media-tv/v4l-utils qt5
+media-video/ffmpeg opus
+media-video/ffmpegthumbnailer gtk jpeg png
+media-video/mpv -xv
+media-video/pipewire bluetooth
+media-video/wireplumber LUA_SINGLE_TARGET: -* lua5-4
+net-dns/dnsmasq script
+net-firewall/iptables nftables
+net-firewall/nftables json python xtables
+net-libs/gnutls
+net-libs/libssh server
+net-libs/nodejs inspector
+net-misc/spice-gtk usbredir
+sys-apps/bubblewrap -suid
+sys-apps/dbus X
+sys-apps/flatpak gtk
+sys-apps/systemd cryptsetup gnuefi homed fido2 tpm
+sys-apps/xdg-desktop-portal screencast
+sys-auth/pambase homed
+sys-kernel/gentoo-sources experimental
+sys-libs/zlib minizip
+www-client/librewolf hwaccel pgo lto screencast
+www-client/firefox hwaccel pgo lto screencast
+www-client/chromium pgo optimize-thinlto thinlto system-openjpeg optimize-webui screencast -hangouts -js-type-check
+www-client/ungoogled-chromium pgo optimize-thinlto thinlto system-openjpeg optimize-webui screencast
+x11-base/xorg-server xvfb
+x11-libs/cairo X
+x11-libs/gdk-pixbuf jpeg
+x11-libs/gtk+ X
+x11-libs/libva utils X
+x11-libs/libva-intel-media-driver set-as-default
+x11-libs/libxkbcommon X
+x11-terms/gnome-terminal -nautilus
+xfce-base/thunar udisks -trash-panel-plugin
+xfce-extra/tumbler ffmpeg gstreamer jpeg odf pdf raw

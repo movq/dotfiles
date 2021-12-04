@@ -1,0 +1,2 @@
+dev-lang/rust -system-bootstrap -system-llvm
+media-libs/freetype -infinality
