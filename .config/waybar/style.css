@@ -44,7 +44,7 @@
     border-radius: 0;
     min-height: 0;
     padding: 0;
-    font-family: "Ubuntu", "Font Awesome 5 Free";
+    font-family: "Noto Sans", "Font Awesome 5 Free";
     font-size: 20px;
 }
 
@@ -68,7 +68,6 @@
 #temperature,
 #tray {
     margin: 3px 6px;
-    background-color: #303030;
     padding-left: 8px;
     padding-right: 8px;
     border-radius: 8px;

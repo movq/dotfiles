@@ -20,7 +20,7 @@ set $ws17  "17"
 set $ws18  "18"
 set $ws19  "19"
 
-font pango:Ubuntu Bold 12
+font pango:Noto Sans Bold 12
 
 # Invisible workspace
 set $ws20 " "
@@ -31,7 +31,7 @@ floating_modifier $mod
 hide_edge_borders smart
 
 # start a terminal
-bindsym $mod+Return exec foot fish
+bindsym $mod+Return exec footclient
 
 # start a web browser
 bindsym $mod+Shift+Return exec firefox&
@@ -162,7 +162,7 @@ bindsym $mod+Shift+period exit
 bindsym $mod+Escape exec swaylock -f
 
 # put the system to sleep
-bindsym $mod+Shift+o exec sudo zzz
+bindsym $mod+Shift+o exec systemctl suspend
 
 bindsym $mod+j exec pcmanfm-qt
 
@@ -221,21 +221,20 @@ input type:touchpad {
 default_border pixel 2
 
 exec gnome-keyring-daemon --start --components=secrets&
-exec gnome-keyring-daemon --start --components=ssh&
+#exec gnome-keyring-daemon --start --components=ssh&
 exec gnome-keyring-daemon --start --components=pkcs11&
 exec mako &
 exec swayidle -w timeout 600 'swaylock -f' timeout 600 'swaymsg "output * dpms off"' resume 'swaymsg "output * dpms on"' before-sleep 'swaylock -f' &
 exec waybar &
 exec gammastep -l 51.5:-1.87 -t 6500:3000 &
 exec xsettingsd &
-#exec pipewire &
-#exec pipewire-pulse &
+exec foot --server &
 
 exec systemctl --user import-environment DISPLAY WAYLAND_DISPLAY SWAYSOCK MOZ_DBUS_REMOTE XDG_CURRENT_DESKTOP
 exec hash dbus-update-activation-environment 2>/dev/null && \
     dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY SWAYSOCK MOZ_DBUS_REMOTE XDG_CURRENT_DESKTOP
 
-output "*" bg "$HOME/pictures/dusk.png" fill
-seat seat0 xcursor_theme Adwaita
+output "*" bg "$HOME/pictures/wallpapers/AnorLondo1.jpg" fill
+#seat seat0 xcursor_theme Bibata-Original-Classic
 
 client.focused #303030 #505050 #000000

@@ -4,6 +4,13 @@ return require("packer").startup(
     function(use)
         use "wbthomason/packer.nvim"
         use "movq/nvim-base16"
+        use "navarasu/onedark.nvim"
+        use {
+            "Pocco81/AutoSave.nvim",
+            config = function()
+                require "autosave".setup {}
+            end
+        }
         use {
             "kyazdani42/nvim-tree.lua",
             requires = "kyazdani42/nvim-web-devicons",
