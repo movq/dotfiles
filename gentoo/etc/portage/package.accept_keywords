@@ -1,4 +1,5 @@
 app-arch/lzlib ~amd64
+app-crypt/debian-archive-keyring ~amd64
 app-crypt/tpm2-abrmd ~amd64
 app-crypt/tpm2-pkcs11 ~amd64
 app-crypt/tpm2-tools ~amd64
@@ -11,6 +12,7 @@ app-emulation/slirp4netns ~amd64
 app-misc/brightnessctl ~amd64
 app-portage/emlop ~amd64
 dev-go/gopls ~amd64
+dev-lang/python ~amd64
 dev-lang/rust ~amd64
 dev-libs/date ~amd64
 <dev-libs/gobject-introspection-1.71.0 ~amd64
@@ -26,6 +28,7 @@ dev-libs/tllist ~amd64
 dev-scheme/bytestructures ~amd64
 dev-util/android-tools ~amd64
 dev-util/android-udev-rules ~amd64
+dev-util/debootstrap ~amd64
 dev-util/gdbus-codegen ~amd64
 dev-util/git-delta ~amd64
 dev-util/rust-analyzer ~amd64
@@ -53,6 +56,7 @@ sys-fs/fuse-overlayfs ~amd64
 sys-kernel/dracut ~amd64
 sys-kernel/gentoo-sources ~amd64
 sys-kernel/gentoo-kernel-bin ~amd64
+sys-libs/glibc ~amd64
 virtual/rust ~amd64
 x11-apps/igt-gpu-tools ~amd64
 x11-themes/materia-theme ~amd64
