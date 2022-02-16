@@ -29,6 +29,7 @@ dev-scheme/bytestructures ~amd64
 dev-util/android-tools ~amd64
 dev-util/android-udev-rules ~amd64
 dev-util/debootstrap ~amd64
+dev-util/flatpak-builder ~amd64
 dev-util/gdbus-codegen ~amd64
 dev-util/git-delta ~amd64
 dev-util/rust-analyzer ~amd64

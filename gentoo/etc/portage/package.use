@@ -60,12 +60,12 @@ sys-apps/flatpak gtk
 sys-apps/systemd cryptsetup gnuefi homed fido2 tpm
 sys-apps/xdg-desktop-portal screencast
 sys-auth/pambase homed
-sys-devel/gcc fortran go
+sys-devel/gcc -fortran go
 sys-devel/llvm
 sys-kernel/gentoo-sources experimental
 sys-libs/zlib minizip
 virtual/rust rustfmt
-www-client/librewolf hwaccel pgo lto screencast
+www-client/librewolf screencast -system-av1
 www-client/firefox hwaccel pgo lto screencast
 www-client/chromium pgo optimize-thinlto thinlto system-openjpeg optimize-webui screencast hangouts -js-type-check
 www-client/ungoogled-chromium pgo optimize-thinlto thinlto system-openjpeg optimize-webui screencast hangouts
