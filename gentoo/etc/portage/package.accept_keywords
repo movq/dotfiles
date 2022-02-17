@@ -53,6 +53,16 @@ net-im/neochat ~amd64
 net-libs/libquotient ~amd64
 net-wireless/bluez ~amd64
 sys-apps/guix ~amd64
+sys-libs/compiler-rt ~amd64
+sys-libs/compiler-rt-sanitizers ~amd64
+sys-libs/libomp ~amd64
+sys-devel/clang ~amd64
+sys-devel/clang-common ~amd64
+sys-devel/clang-runtime ~amd64
+sys-devel/lld ~amd64
+sys-devel/llvm ~amd64
+sys-devel/llvm-common ~amd64
+sys-devel/llvmgold ~amd64
 sys-fs/fuse-overlayfs ~amd64
 sys-kernel/dracut ~amd64
 sys-kernel/gentoo-sources ~amd64
