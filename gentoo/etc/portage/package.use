@@ -13,6 +13,7 @@ dev-libs/boost icu
 dev-libs/libdbusmenu gtk3
 dev-libs/libpcre2 pcre32
 dev-libs/libxml2 icu
+dev-util/geany -vte
 dev-util/ostree introspection
 dev-qt/qtgui X egl jpeg
 gnome-base/gnome-control-center networkmanager
@@ -40,7 +41,6 @@ media-libs/mesa X -llvm
 media-sound/mpd vorbis flac opus
 media-sound/kid3 flac mp3 vorbis
 media-sound/pulseaudio bluetooth native-headset
-media-tv/v4l-utils qt5
 media-video/ffmpeg opus
 media-video/ffmpegthumbnailer gtk jpeg png gnome
 media-video/mpv -xv
@@ -55,13 +55,16 @@ net-libs/nodejs -lto inspector
 net-misc/networkmanager iwd -concheck
 net-misc/spice-gtk usbredir
 sys-apps/bubblewrap -suid
+sys-apps/busybox syslog
 sys-apps/dbus X
 sys-apps/flatpak gtk
 sys-apps/xdg-desktop-portal screencast
+sys-auth/seatd builtin
 sys-devel/gcc go -fortran -lto
 sys-devel/llvm -binutils-plugin
 sys-kernel/gentoo-sources experimental
 sys-libs/zlib minizip
+sys-power/suspend -crypt -lzo
 virtual/rust rustfmt
 www-client/librewolf -clang lto screencast system-png -system-av1
 www-client/firefox hwaccel pgo lto screencast
@@ -71,6 +74,7 @@ x11-base/xorg-server xvfb
 x11-libs/cairo X
 x11-libs/gdk-pixbuf jpeg
 x11-libs/gtk+ X
+x11-libs/libfm -automount gtk
 x11-libs/libva utils X
 x11-libs/libva-intel-media-driver set-as-default
 x11-libs/libxkbcommon X
