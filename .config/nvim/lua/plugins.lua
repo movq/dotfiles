@@ -1,3 +1,6 @@
+vim.g.symbols_outline = {
+    symbol_blacklist = {"Variable"},
+}
 vim.cmd [[packadd packer.nvim]]
 
 return require("packer").startup(
@@ -15,7 +18,14 @@ return require("packer").startup(
             "kyazdani42/nvim-tree.lua",
             requires = "kyazdani42/nvim-web-devicons",
             config = function()
-                require "nvim-tree".setup {}
+                require "nvim-tree".setup {
+                    update_cwd = true,
+                    view = {
+                        mappings = {
+                            list = {{ key = "<C-e>", action="" }},
+                        },
+                    },
+                }
             end
         }
         use "kyazdani42/nvim-web-devicons"
@@ -31,6 +41,7 @@ return require("packer").startup(
             },
         }
         use "nvim-lua/lsp-status.nvim"
+        use "simrat39/symbols-outline.nvim"
         use "nvim-treesitter/nvim-treesitter"
         use {
             "nvim-telescope/telescope.nvim",

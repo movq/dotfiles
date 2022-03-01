@@ -27,6 +27,8 @@ nnoremap <leader>p :Telescope buffers<CR>
 nnoremap <leader>a :BufferPrevious<CR>
 nnoremap <leader>e :BufferNext<CR>
 
+nnoremap <C-t> :SymbolsOutline<CR>
+
 nmap <leader>tld <Plug>(toggle-lsp-diag)
 
 set number
