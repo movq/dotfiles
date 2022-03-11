@@ -1,2 +1,1 @@
 dev-lang/rust-bin
->=sys-kernel/gentoo-sources-5.16.0

@@ -1,3 +1,4 @@
+app-admin/haskell-updater ~amd64
 app-arch/lzlib ~amd64
 app-crypt/debian-archive-keyring ~amd64
 app-crypt/tpm2-abrmd ~amd64
@@ -12,6 +13,8 @@ app-emulation/slirp4netns ~amd64
 app-misc/brightnessctl ~amd64
 app-portage/emlop ~amd64
 dev-go/gopls ~amd64
+dev-lang/ghc ~amd64
+dev-lang/ocaml ~amd64
 dev-lang/python ~amd64
 dev-lang/rust ~amd64
 dev-libs/date ~amd64
@@ -21,10 +24,12 @@ dev-libs/gjs ~amd64
 dev-libs/glib ~amd64
 dev-libs/icu ~amd64
 dev-libs/libfmt ~amd64
+dev-libs/libvterm ~amd64
 dev-libs/nspr ~amd64
 dev-libs/nss ~amd64
 dev-libs/spdlog ~amd64
 dev-libs/tllist ~amd64
+dev-lua/luv ~amd64
 dev-scheme/bytestructures ~amd64
 dev-util/android-tools ~amd64
 dev-util/android-udev-rules ~amd64
@@ -33,6 +38,7 @@ dev-util/flatpak-builder ~amd64
 dev-util/gdbus-codegen ~amd64
 dev-util/git-delta ~amd64
 dev-util/rust-analyzer ~amd64
+dev-util/tokei ~amd64
 games-util/game-device-udev-rules ~amd64
 games-util/steam-launcher ~amd64
 gnome-base/* ~amd64

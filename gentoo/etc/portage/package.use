@@ -25,7 +25,7 @@ gui-apps/waybar network tray
 gui-libs/wlroots X
 gui-wm/sway X
 media-fonts/fontawesome ttf
-media-fonts/noto -extra
+media-fonts/noto cjk -extra
 media-gfx/imv gif jpeg png svg tiff
 media-libs/freetype harfbuzz
 media-libs/harfbuzz icu
@@ -66,7 +66,7 @@ sys-kernel/gentoo-sources experimental
 sys-libs/zlib minizip
 sys-power/suspend -crypt -lzo
 virtual/rust rustfmt
-www-client/librewolf -clang lto screencast system-png -system-av1
+www-client/librewolf clang lto screencast system-png -system-av1
 www-client/firefox hwaccel pgo lto screencast
 www-client/chromium pgo optimize-thinlto thinlto system-openjpeg optimize-webui screencast hangouts -js-type-check
 www-client/ungoogled-chromium pgo optimize-thinlto thinlto system-openjpeg optimize-webui screencast hangouts
