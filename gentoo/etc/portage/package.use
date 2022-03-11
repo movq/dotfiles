@@ -80,5 +80,4 @@ x11-libs/libva-intel-media-driver set-as-default
 x11-libs/libxkbcommon X
 x11-libs/pango X
 x11-terms/gnome-terminal -nautilus
-xfce-base/thunar udisks -trash-panel-plugin
 xfce-extra/tumbler ffmpeg gstreamer jpeg odf pdf raw
