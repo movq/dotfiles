@@ -1,3 +1,56 @@
+require('plugins')
+
+vim.g.mapleader = ","
+
+ -- Just Dvorak things
+vim.api.nvim_set_keymap("", "t", "k", { noremap = true })
+vim.api.nvim_set_keymap("", "k", "t", { noremap = true })
+vim.api.nvim_set_keymap("", "n", "j", { noremap = true })
+vim.api.nvim_set_keymap("", "j", "n", { noremap = true })
+vim.api.nvim_set_keymap("", "s", "l", { noremap = true })
+vim.api.nvim_set_keymap("", "l", "s", { noremap = true })
+
+vim.api.nvim_set_keymap("i", "hh", "<Esc>", { noremap = true })
+vim.api.nvim_set_keymap("n", ";", ":", { noremap = true })
+
+vim.api.nvim_set_keymap("", "<C-h>", "<C-w>h", {})
+vim.api.nvim_set_keymap("", "<C-n>", "<C-w>j", {})
+vim.api.nvim_set_keymap("", "<C-t>", "<C-w>k", {})
+vim.api.nvim_set_keymap("", "<C-s>", "<C-w>l", {})
+
+vim.api.nvim_set_keymap("n", "<C-e>", ":NvimTreeToggle<CR>", { noremap = true})
+vim.api.nvim_set_keymap("n", "<leader>r", ":NvimTreeRefresh<CR>", { noremap = true})
+vim.api.nvim_set_keymap("n", "<leader>n", ":NvimTreeFindFile<CR>", { noremap = true})
+
+vim.api.nvim_set_keymap("n", "<C-p>", ":Telescope find_files<CR>", { noremap = true})
+vim.api.nvim_set_keymap("n", "<leader>p", ":Telescope buffers<CR>", { noremap = true})
+
+vim.api.nvim_set_keymap("n", "<C-t>", ":SymbolsOutline<CR>", { noremap = true})
+
+vim.api.nvim_set_keymap("n", "<leader>tld", "<Plug>(toggle-lsp-diag)", { noremap = true})
+
+vim.opt.number = true
+vim.opt.termguicolors = true
+vim.opt.tabstop = 4
+vim.opt.shiftwidth = 4
+vim.opt.expandtab = true
+vim.opt.wildmode = "longest,list,full"
+vim.opt.wildmenu = true
+vim.opt.completeopt = "menu,menuone,noselect"
+vim.opt.mouse = "a"
+
+vim.opt.clipboard = "unnamedplus"
+vim.opt.hidden = true
+vim.opt.cursorline = true
+vim.opt.hlsearch = false
+
+vim.cmd("autocmd FileType text lua require 'cmp'.setup.buffer { sources = {} }")
+vim.cmd("autocmd FileType yaml setlocal indentkeys-=0#")
+
+vim.cmd("highlight ExtraWhitespace guibg=red")
+vim.cmd("match ExtraWhitespace /\\s\\+$/")
+vim.cmd("highlight NvimTreeSpecialFile guifg='#f0c674'")
+vim.cmd("highlight NvimTreeRootFolder guifg='#b294bb'")
 
 local cmp = require "cmp"
 cmp.setup(
