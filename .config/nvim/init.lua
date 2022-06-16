@@ -13,10 +13,12 @@ vim.api.nvim_set_keymap("", "l", "s", { noremap = true })
 vim.api.nvim_set_keymap("i", "hh", "<Esc>", { noremap = true })
 vim.api.nvim_set_keymap("n", ";", ":", { noremap = true })
 
-vim.api.nvim_set_keymap("", "<C-h>", "<C-w>h", {})
-vim.api.nvim_set_keymap("", "<C-n>", "<C-w>j", {})
-vim.api.nvim_set_keymap("", "<C-t>", "<C-w>k", {})
-vim.api.nvim_set_keymap("", "<C-s>", "<C-w>l", {})
+vim.api.nvim_set_keymap("", "<C-h>", "<C-w>h", { noremap = true })
+vim.api.nvim_set_keymap("", "<C-n>", "<C-w>j", { noremap = true })
+vim.api.nvim_set_keymap("", "<C-t>", "<C-w>k", { noremap = true })
+vim.api.nvim_set_keymap("", "<C-s>", "<C-w>l", { noremap = true })
+
+vim.api.nvim_set_keymap("n", "<C-w>", ":bdelete<CR>", { noremap = true})
 
 vim.api.nvim_set_keymap("n", "<C-e>", ":NvimTreeToggle<CR>", { noremap = true})
 vim.api.nvim_set_keymap("n", "<leader>r", ":NvimTreeRefresh<CR>", { noremap = true})
@@ -165,18 +167,3 @@ require'nvim-treesitter.configs'.setup {
         additional_vim_regex_highlighting = false,
   },
 }
-
--- require('base16-colorscheme').setup({
---     base00 = '#080808', base01 = '#282a2e', base02 = '#373b41', base03 = '#969896',
---     base04 = '#b4b7b4', base05 = '#c5c8c6', base06 = '#e0e0e0', base07 = '#ffffff',
---     base08 = '#de935f', base09 = '#cc6666', base0A = '#f0c674', base0B = '#b5bd68',
---     base0C = '#8abeb7', base0D = '#81a2be', base0E = '#b294bb', base0F = '#a3685a',
--- })
-
-require('onedark').setup {
-    style = 'darker',
-    colors = {
-        bg0 = '#080808'
-    }
-}
-require('onedark').load()

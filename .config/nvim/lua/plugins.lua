@@ -7,7 +7,18 @@ return require("packer").startup(
     function(use)
         use "wbthomason/packer.nvim"
         use "movq/nvim-base16"
-        use "navarasu/onedark.nvim"
+        use {
+	    "navarasu/onedark.nvim",
+            config = function()
+                require('onedark').setup {
+                    style = 'darker',
+                    colors = {
+                        bg0 = '#080808'
+                    }
+                }
+                require('onedark').load()
+            end
+        }
         use {
             "Pocco81/AutoSave.nvim",
             config = function()
