@@ -36,6 +36,9 @@ return require("packer").startup(
                             list = {{ key = "<C-e>", action="" }},
                         },
                     },
+                    filters = {
+                        dotfiles = true,
+                    }
                 }
             end
         }
