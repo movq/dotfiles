@@ -29,7 +29,6 @@ return require("packer").startup(
             end
         }
         use "kyazdani42/nvim-web-devicons"
-        use "romgrk/barbar.nvim"
         use "neovim/nvim-lspconfig"
         use {
             "hrsh7th/nvim-cmp",
@@ -63,7 +62,7 @@ return require("packer").startup(
             end
         }
         use {
-            "famiu/feline.nvim",
+            "feline-nvim/feline.nvim",
             config = function()
                 local components = require('plugin_config.feline')
                 require("feline").setup({
