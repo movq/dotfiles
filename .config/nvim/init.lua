@@ -30,6 +30,7 @@ vim.api.nvim_set_keymap("n", "<C-t>", ":SymbolsOutline<CR>", { noremap = true})
 vim.api.nvim_set_keymap("n", "<leader>tld", "<Plug>(toggle-lsp-diag)", { noremap = true})
 
 vim.opt.number = true
+vim.opt.signcolumn = "yes"
 vim.opt.termguicolors = true
 vim.opt.tabstop = 4
 vim.opt.shiftwidth = 4
