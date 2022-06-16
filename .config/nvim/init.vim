@@ -46,6 +46,7 @@ set cursorline
 set nohlsearch
 
 autocmd FileType text lua require 'cmp'.setup.buffer { sources = {} }
+autocmd FileType yaml setlocal indentkeys-=0#
 
 highlight ExtraWhitespace guibg=red
 match ExtraWhitespace /\s\+$/
