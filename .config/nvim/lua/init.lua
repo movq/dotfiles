@@ -6,12 +6,12 @@ cmp.setup(
             expand = function(args)
             end
         },
-        mapping = {
+        mapping = cmp.mapping.preset.insert ({
             ["<C-d>"] = cmp.mapping.scroll_docs(-4),
             ["<C-f>"] = cmp.mapping.scroll_docs(4),
             ["<C-Space>"] = cmp.mapping.complete(),
             ["<C-e>"] = cmp.mapping.close(),
-        },
+            }),
         sources = {
             {name = "nvim_lsp"},
             {name = "buffer"}
@@ -71,7 +71,7 @@ local runtime_path = vim.split(package.path, ";")
 table.insert(runtime_path, "lua/?.lua")
 table.insert(runtime_path, "lua/?/init.lua")
 nvim_lsp["sumneko_lua"].setup {
-    cmd = {"lua-language-server", "-E", vim.env.HOME .. "/.local/share/lua-language-server/main.lua"},
+    cmd = {"lua-language-server", "-E", vim.env.HOME .. "/src/lua-language-server/main.lua"},
     settings = {
         Lua = {
             runtime = {
@@ -113,16 +113,16 @@ require'nvim-treesitter.configs'.setup {
 }
 
 -- require('base16-colorscheme').setup({
---     base00 = '#141414', base01 = '#282a2e', base02 = '#373b41', base03 = '#969896',
+--     base00 = '#080808', base01 = '#282a2e', base02 = '#373b41', base03 = '#969896',
 --     base04 = '#b4b7b4', base05 = '#c5c8c6', base06 = '#e0e0e0', base07 = '#ffffff',
 --     base08 = '#de935f', base09 = '#cc6666', base0A = '#f0c674', base0B = '#b5bd68',
 --     base0C = '#8abeb7', base0D = '#81a2be', base0E = '#b294bb', base0F = '#a3685a',
 -- })
+
 require('onedark').setup {
     style = 'darker',
     colors = {
-        bg0 = '#121212'
+        bg0 = '#080808'
     }
-
 }
 require('onedark').load()

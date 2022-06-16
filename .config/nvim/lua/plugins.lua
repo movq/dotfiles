@@ -45,7 +45,8 @@ return require("packer").startup(
         use "nvim-treesitter/nvim-treesitter"
         use {
             "nvim-telescope/telescope.nvim",
-            requires = {"nvim-lua/plenary.nvim"}
+            requires = {"nvim-lua/plenary.nvim"},
+            commit = "80cdb00b221f69348afc4fb4b701f51eb8dd3120"
         }
         use {
             "WhoIsSethDaniel/toggle-lsp-diagnostics.nvim",
