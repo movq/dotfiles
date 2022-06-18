@@ -4,7 +4,6 @@ vim.g.mapleader = ","
 
  -- Just Dvorak things
 vim.api.nvim_set_keymap("", "t", "k", { noremap = true })
-vim.api.nvim_set_keymap("", "k", "t", { noremap = true })
 vim.api.nvim_set_keymap("", "n", "j", { noremap = true })
 vim.api.nvim_set_keymap("", "j", "n", { noremap = true })
 vim.api.nvim_set_keymap("", "s", "l", { noremap = true })
@@ -29,9 +28,9 @@ vim.api.nvim_set_keymap("n", "<leader>p", ":Telescope buffers<CR>", { noremap = 
 vim.api.nvim_set_keymap("n", "<C-j>", ":Telescope lsp_document_symbols <CR>", { noremap = true})
 vim.api.nvim_set_keymap("n", "<C-k>", ":Telescope lsp_workspace_symbols <CR>", { noremap = true})
 
-vim.api.nvim_set_keymap("n", "<C-t>", ":SymbolsOutline<CR>", { noremap = true})
+vim.api.nvim_set_keymap("n", "<C-l>", ":SymbolsOutline<CR>", { noremap = true})
 
-vim.api.nvim_set_keymap("n", "<leader>tld", "<Plug>(toggle-lsp-diag)", { noremap = true})
+vim.api.nvim_set_keymap("n", "<leader>td", "<Plug>(toggle-lsp-diag)", { noremap = true})
 
 vim.opt.number = true
 vim.opt.signcolumn = "yes"
@@ -95,7 +94,7 @@ local on_attach = function(client, bufnr)
     -- See `:help vim.lsp.*` for documentation on any of the below functions
     buf_set_keymap("n", "gD", "<cmd>lua vim.lsp.buf.declaration()<CR>", opts)
     buf_set_keymap("n", "gd", "<cmd>lua vim.lsp.buf.definition()<CR>", opts)
-    buf_set_keymap("n", "K", "<cmd>lua vim.lsp.buf.hover()<CR>", opts)
+    buf_set_keymap("n", "k", "<cmd>lua vim.lsp.buf.hover()<CR>", opts)
     buf_set_keymap("n", "gi", "<cmd>lua vim.lsp.buf.implementation()<CR>", opts)
     buf_set_keymap("i", "<C-p>", "<cmd>lua vim.lsp.buf.signature_help()<CR>", opts)
     buf_set_keymap("n", "<space>wa", "<cmd>lua vim.lsp.buf.add_workspace_folder()<CR>", opts)
