@@ -44,6 +44,8 @@ return require("packer").startup(
         }
         use "kyazdani42/nvim-web-devicons"
         use "neovim/nvim-lspconfig"
+        use "L3MON4D3/LuaSnip"
+        use "saadparwaiz1/cmp_luasnip"
         use {
             "hrsh7th/nvim-cmp",
             requires = {
@@ -52,6 +54,30 @@ return require("packer").startup(
                 "hrsh7th/cmp-buffer",
                 "hrsh7th/nvim-cmp"
             },
+            config = function()
+                local cmp = require "cmp"
+                cmp.setup(
+                    {
+                        snippet = {
+                            expand = function(args)
+                                require('luasnip').lsp_expand(args.body)
+                            end,
+                        },
+                        mapping = cmp.mapping.preset.insert ({
+                            ["<C-d>"] = cmp.mapping.scroll_docs(-4),
+                            ["<C-f>"] = cmp.mapping.scroll_docs(4),
+                            ["<C-Space>"] = cmp.mapping.complete(),
+                            ["<C-e>"] = cmp.mapping.close(),
+                            ["<CR>"] = cmp.mapping.confirm({ select = true }), -- Accept currently selected item. Set `select` to `false` to only confirm explicitly selected items.
+                            }),
+                        sources = {
+                            {name = "nvim_lsp"},
+                            {name = "luasnip"},
+                            {name = "buffer"}
+                        }
+                    }
+                )
+            end
         }
         use "nvim-lua/lsp-status.nvim"
         use "simrat39/symbols-outline.nvim"

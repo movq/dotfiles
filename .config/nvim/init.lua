@@ -56,26 +56,6 @@ vim.cmd("match ExtraWhitespace /\\s\\+$/")
 vim.cmd("highlight NvimTreeSpecialFile guifg='#f0c674'")
 vim.cmd("highlight NvimTreeRootFolder guifg='#b294bb'")
 
-local cmp = require "cmp"
-cmp.setup(
-    {
-        snippet = {
-            expand = function(args)
-            end
-        },
-        mapping = cmp.mapping.preset.insert ({
-            ["<C-d>"] = cmp.mapping.scroll_docs(-4),
-            ["<C-f>"] = cmp.mapping.scroll_docs(4),
-            ["<C-Space>"] = cmp.mapping.complete(),
-            ["<C-e>"] = cmp.mapping.close(),
-            }),
-        sources = {
-            {name = "nvim_lsp"},
-            {name = "buffer"}
-        }
-    }
-)
-
 local nvim_lsp = require("lspconfig")
 
 -- Use an on_attach function to only map the following keys
@@ -104,10 +84,10 @@ local on_attach = function(client, bufnr)
     buf_set_keymap("n", "<space>rn", "<cmd>lua vim.lsp.buf.rename()<CR>", opts)
     buf_set_keymap("n", "<space>ca", "<cmd>lua vim.lsp.buf.code_action()<CR>", opts)
     buf_set_keymap("n", "gr", "<cmd>lua vim.lsp.buf.references()<CR>", opts)
-    buf_set_keymap("n", "<space>e", "<cmd>lua vim.lsp.diagnostic.show_line_diagnostics()<CR>", opts)
-    buf_set_keymap("n", "[d", "<cmd>lua vim.lsp.diagnostic.goto_prev()<CR>", opts)
-    buf_set_keymap("n", "]d", "<cmd>lua vim.lsp.diagnostic.goto_next()<CR>", opts)
-    buf_set_keymap("n", "<space>q", "<cmd>lua vim.lsp.diagnostic.set_loclist()<CR>", opts)
+    buf_set_keymap("n", "<space>e", "<cmd>lua vim.diagnostic.show_line_diagnostics()<CR>", opts)
+    buf_set_keymap("n", "[d", "<cmd>lua vim.diagnostic.goto_prev()<CR>", opts)
+    buf_set_keymap("n", "]d", "<cmd>lua vim.diagnostic.goto_next()<CR>", opts)
+    buf_set_keymap("n", "<space>q", "<cmd>lua vim.diagnostic.set_loclist()<CR>", opts)
     buf_set_keymap("n", "<space>f", "<cmd>lua vim.lsp.buf.formatting()<CR>", opts)
 end
 
