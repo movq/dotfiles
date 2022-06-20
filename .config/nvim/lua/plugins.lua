@@ -81,6 +81,7 @@ return require("packer").startup(
         }
         use "nvim-lua/lsp-status.nvim"
         use "simrat39/symbols-outline.nvim"
+        use "mfussenegger/nvim-dap"
         use "nvim-treesitter/nvim-treesitter"
         use {
             "nvim-telescope/telescope.nvim",
