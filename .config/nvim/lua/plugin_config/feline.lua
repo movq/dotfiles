@@ -19,6 +19,17 @@ M.active[1] = {
     {
         provider = 'position',
         left_sep = ' ',
+        right_sep = '   ',
+    },
+    {
+        provider = 'lsp_client_names',
+        -- right_sep = {
+        --     str = ' ',
+        --     hl = {
+        --         fg = 'NONE',
+        --         bg = 'black'
+        --     }
+        -- }
     },
     {
         provider = 'diagnostic_errors',
@@ -55,34 +66,6 @@ M.active[2] = {
         }
     },
     {
-        provider = 'git_diff_added',
-        hl = {
-            fg = 'green',
-            bg = 'black'
-        }
-    },
-    {
-        provider = 'git_diff_changed',
-        hl = {
-            fg = 'orange',
-            bg = 'black'
-        }
-    },
-    {
-        provider = 'git_diff_removed',
-        hl = {
-            fg = 'red',
-            bg = 'black'
-        },
-        right_sep = {
-            str = ' ',
-            hl = {
-                fg = 'NONE',
-                bg = 'black'
-            }
-        }
-    },
-    {
         provider = 'line_percentage',
         hl = {
             style = 'bold'
@@ -92,6 +75,6 @@ M.active[2] = {
     },
 }
 
--- M.inactive = M.active
+M.inactive = M.active
 
 return M

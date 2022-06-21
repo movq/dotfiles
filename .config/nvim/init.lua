@@ -91,9 +91,14 @@ require('toggle_lsp_diagnostics').init {
 
 require('gitsigns').setup()
 
-require('feline').setup({
-    components = require('plugin_config.feline')
-})
+require('feline').setup {
+    components = require('plugin_config.feline'),
+    disable = {
+        filetypes = {
+            'NvimTree',
+        },
+    },
+}
 
 require('telescope').setup {
   pickers = {
@@ -105,6 +110,17 @@ require('telescope').setup {
 
 vim.g.symbols_outline = {
     symbol_blacklist = {"Variable"},
+}
+
+require'nvim-treesitter.configs'.setup {
+    ensure_installed = {
+        "c", "cpp", "rust", "cuda", "go", "javascript", "lua",
+        "python", "typescript", "vim", "yaml", "haskell"
+    },
+    highlight = {
+        enable = true,
+        additional_vim_regex_highlighting = false,
+    },
 }
 
 ---------------------------------------------------------------------------------------------------
@@ -199,16 +215,38 @@ nvim_lsp["sumneko_lua"].setup {
     capabilities = require("cmp_nvim_lsp").update_capabilities(vim.lsp.protocol.make_client_capabilities())
 }
 
-require'nvim-treesitter.configs'.setup {
-    ensure_installed = {
-        "c", "cpp", "rust", "cuda", "go", "javascript", "lua",
-        "python", "typescript", "vim", "yaml", "haskell"
-    },
-    highlight = {
-        enable = true,
-        additional_vim_regex_highlighting = false,
-    },
-}
+local cmp = require('cmp')
+cmp.setup(
+    {
+        snippet = {
+            expand = function(args)
+                require('luasnip').lsp_expand(args.body)
+            end,
+        },
+        mapping = cmp.mapping.preset.insert ({
+            ["<C-d>"] = cmp.mapping.scroll_docs(-4),
+            ["<C-f>"] = cmp.mapping.scroll_docs(4),
+            ["<C-Space>"] = cmp.mapping.complete(),
+            ["<C-e>"] = cmp.mapping.close(),
+            ["<CR>"] = cmp.mapping.confirm({ select = false }), -- Accept currently selected item. Set `select` to `false` to only confirm explicitly selected items.
+        }),
+        sources = {
+            {name = "nvim_lsp"},
+            {name = "luasnip"},
+            {name = "buffer"}
+        },
+        sorting = {
+            comparators = {
+                cmp.config.compare.locality,
+                cmp.config.compare.recently_used,
+                require('clangd_extensions.cmp_scores'),
+                cmp.config.compare.score,
+                cmp.config.compare.offset,
+                cmp.config.compare.order,
+            }
+        }
+    }
+)
 
 local dap = require('dap')
 dap.adapters.python = {
