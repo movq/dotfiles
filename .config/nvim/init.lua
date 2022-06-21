@@ -70,8 +70,6 @@ require('onedark').setup {
 require('onedark').load()
 vim.cmd("highlight ExtraWhitespace guibg=red")
 vim.cmd("match ExtraWhitespace /\\s\\+$/")
-vim.cmd("highlight NvimTreeSpecialFile guifg='#f0c674'")
-vim.cmd("highlight NvimTreeRootFolder guifg='#b294bb'")
 
 require('autosave').setup {}
 
