@@ -59,10 +59,57 @@ vim.opt.hlsearch = false
 vim.cmd("autocmd FileType text lua require 'cmp'.setup.buffer { sources = {} }")
 vim.cmd("autocmd FileType yaml setlocal indentkeys-=0#")
 
+---------------------------------------------------------------------------------------------------
+
+require('onedark').setup {
+    style = 'darker',
+    colors = {
+        bg0 = '#080808'
+    }
+}
+require('onedark').load()
 vim.cmd("highlight ExtraWhitespace guibg=red")
 vim.cmd("match ExtraWhitespace /\\s\\+$/")
 vim.cmd("highlight NvimTreeSpecialFile guifg='#f0c674'")
 vim.cmd("highlight NvimTreeRootFolder guifg='#b294bb'")
+
+require('autosave').setup {}
+
+require('nvim-tree').setup {
+    update_cwd = true,
+    view = {
+        mappings = {
+            list = {{ key = "<C-e>", action="" }},
+        },
+    },
+    filters = {
+        dotfiles = true,
+    },
+}
+
+require('toggle_lsp_diagnostics').init {
+    update_in_insert = false,
+}
+
+require('gitsigns').setup()
+
+require('feline').setup({
+    components = require('plugin_config.feline')
+})
+
+require('telescope').setup {
+  pickers = {
+    buffers = {
+      sort_lastused = true
+    }
+  }
+}
+
+vim.g.symbols_outline = {
+    symbol_blacklist = {"Variable"},
+}
+
+---------------------------------------------------------------------------------------------------
 
 local nvim_lsp = require("lspconfig")
 
@@ -71,9 +118,6 @@ local nvim_lsp = require("lspconfig")
 local on_attach = function(client, bufnr)
     local function buf_set_keymap(...)
         vim.api.nvim_buf_set_keymap(bufnr, ...)
-    end
-    local function buf_set_option(...)
-        vim.api.nvim_buf_set_option(bufnr, ...)
     end
 
     -- Mappings.
@@ -85,9 +129,9 @@ local on_attach = function(client, bufnr)
     buf_set_keymap("n", "k", "<cmd>lua vim.lsp.buf.hover()<CR>", opts)
     buf_set_keymap("n", "gi", "<cmd>lua vim.lsp.buf.implementation()<CR>", opts)
     buf_set_keymap("i", "<C-p>", "<cmd>lua vim.lsp.buf.signature_help()<CR>", opts)
-    buf_set_keymap("n", "<space>wa", "<cmd>lua vim.lsp.buf.add_workspace_folder()<CR>", opts)
-    buf_set_keymap("n", "<space>wr", "<cmd>lua vim.lsp.buf.remove_workspace_folder()<CR>", opts)
-    buf_set_keymap("n", "<space>wl", "<cmd>lua print(vim.inspect(vim.lsp.buf.list_workspace_folders()))<CR>", opts)
+    -- buf_set_keymap("n", "<space>wa", "<cmd>lua vim.lsp.buf.add_workspace_folder()<CR>", opts)
+    -- buf_set_keymap("n", "<space>wr", "<cmd>lua vim.lsp.buf.remove_workspace_folder()<CR>", opts)
+    -- buf_set_keymap("n", "<space>wl", "<cmd>lua print(vim.inspect(vim.lsp.buf.list_workspace_folders()))<CR>", opts)
     buf_set_keymap("n", "<space>D", "<cmd>lua vim.lsp.buf.type_definition()<CR>", opts)
     buf_set_keymap("n", "<space>rn", "<cmd>lua vim.lsp.buf.rename()<CR>", opts)
     buf_set_keymap("n", "<space>ca", "<cmd>lua vim.lsp.buf.code_action()<CR>", opts)
@@ -95,18 +139,17 @@ local on_attach = function(client, bufnr)
     buf_set_keymap("n", "<space>e", "<cmd>lua vim.diagnostic.open_float()<CR>", opts)
     buf_set_keymap("n", "[d", "<cmd>lua vim.diagnostic.goto_prev()<CR>", opts)
     buf_set_keymap("n", "]d", "<cmd>lua vim.diagnostic.goto_next()<CR>", opts)
-    buf_set_keymap("n", "<space>q", "<cmd>lua vim.diagnostic.set_loclist()<CR>", opts)
-    buf_set_keymap("n", "<space>f", "<cmd>lua vim.lsp.buf.formatting()<CR>", opts)
+    -- buf_set_keymap("n", "<space>q", "<cmd>lua vim.diagnostic.set_loclist()<CR>", opts)
+    -- buf_set_keymap("n", "<space>f", "<cmd>lua vim.lsp.buf.formatting()<CR>", opts)
 end
 
-nvim_lsp["clangd"].setup {
-    on_attach = on_attach,
-    flags = {
-        debounce_text_changes = 150
+require "clangd_extensions".setup {
+    server = {
+        cmd = {"/home/mike/.local/bin/runlsp.sh", "clangd-14"},
+        on_attach = on_attach,
+        capabilities = require("cmp_nvim_lsp").update_capabilities(vim.lsp.protocol.make_client_capabilities()),
     },
-    capabilities = require("cmp_nvim_lsp").update_capabilities(vim.lsp.protocol.make_client_capabilities()),
 }
-
 nvim_lsp["pyright"].setup {
     on_attach = on_attach,
     flags = {
@@ -122,7 +165,8 @@ nvim_lsp["rust_analyzer"].setup {
     },
     capabilities = require("cmp_nvim_lsp").update_capabilities(vim.lsp.protocol.make_client_capabilities()),
 }
--- Lua stuff
+
+-- Lua LSP stuff
 local runtime_path = vim.split(package.path, ";")
 table.insert(runtime_path, "lua/?.lua")
 table.insert(runtime_path, "lua/?/init.lua")
@@ -165,7 +209,7 @@ require'nvim-treesitter.configs'.setup {
     highlight = {
         enable = true,
         additional_vim_regex_highlighting = false,
-  },
+    },
 }
 
 local dap = require('dap')

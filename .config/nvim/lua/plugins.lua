@@ -1,51 +1,15 @@
-vim.g.symbols_outline = {
-    symbol_blacklist = {"Variable"},
-}
-vim.cmd [[packadd packer.nvim]]
-
 return require("packer").startup(
     function(use)
         use "wbthomason/packer.nvim"
         use "movq/nvim-base16"
-        use {
-	    "navarasu/onedark.nvim",
-            config = function()
-                require('onedark').setup {
-                    style = 'darker',
-                    colors = {
-                        bg0 = '#080808'
-                    }
-                }
-                require('onedark').load()
-            end
-        }
-        use {
-            "Pocco81/AutoSave.nvim",
-            config = function()
-                require "autosave".setup {}
-            end
-        }
-        use {
-            "kyazdani42/nvim-tree.lua",
-            requires = "kyazdani42/nvim-web-devicons",
-            config = function()
-                require "nvim-tree".setup {
-                    update_cwd = true,
-                    view = {
-                        mappings = {
-                            list = {{ key = "<C-e>", action="" }},
-                        },
-                    },
-                    filters = {
-                        dotfiles = true,
-                    }
-                }
-            end
-        }
+        use "navarasu/onedark.nvim"
+        use "Pocco81/AutoSave.nvim"
+        use "kyazdani42/nvim-tree.lua"
         use "kyazdani42/nvim-web-devicons"
         use "neovim/nvim-lspconfig"
         use "L3MON4D3/LuaSnip"
         use "saadparwaiz1/cmp_luasnip"
+        use "p00f/clangd_extensions.nvim"
         use {
             "hrsh7th/nvim-cmp",
             requires = {
@@ -68,12 +32,22 @@ return require("packer").startup(
                             ["<C-f>"] = cmp.mapping.scroll_docs(4),
                             ["<C-Space>"] = cmp.mapping.complete(),
                             ["<C-e>"] = cmp.mapping.close(),
-                            ["<CR>"] = cmp.mapping.confirm({ select = true }), -- Accept currently selected item. Set `select` to `false` to only confirm explicitly selected items.
-                            }),
+                            ["<CR>"] = cmp.mapping.confirm({ select = false }), -- Accept currently selected item. Set `select` to `false` to only confirm explicitly selected items.
+                        }),
                         sources = {
                             {name = "nvim_lsp"},
                             {name = "luasnip"},
                             {name = "buffer"}
+                        },
+                        sorting = {
+                            comparators = {
+                                cmp.config.compare.locality,
+                                cmp.config.compare.recently_used,
+                                require('clangd_extensions.cmp_scores'),
+                                cmp.config.compare.score,
+                                cmp.config.compare.offset,
+                                cmp.config.compare.order,
+                            }
                         }
                     }
                 )
@@ -88,28 +62,8 @@ return require("packer").startup(
             requires = {"nvim-lua/plenary.nvim"},
             commit = "80cdb00b221f69348afc4fb4b701f51eb8dd3120"
         }
-        use {
-            "WhoIsSethDaniel/toggle-lsp-diagnostics.nvim",
-            config = function()
-                require('toggle_lsp_diagnostics').init({
-                    update_in_insert = false,
-                })
-            end
-        }
-        use {
-            "lewis6991/gitsigns.nvim",
-            config = function()
-                require("gitsigns").setup()
-            end
-        }
-        use {
-            "feline-nvim/feline.nvim",
-            config = function()
-                local components = require('plugin_config.feline')
-                require("feline").setup({
-                    components = components,
-                })
-            end
-        }
+        use "WhoIsSethDaniel/toggle-lsp-diagnostics.nvim"
+        use "lewis6991/gitsigns.nvim"
+        use "feline-nvim/feline.nvim"
     end
 )
