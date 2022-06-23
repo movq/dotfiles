@@ -40,6 +40,12 @@ vim.api.nvim_set_keymap("n", "<F12>", "<Cmd>lua require'dap'.step_out()<CR>", { 
 vim.api.nvim_set_keymap("n", "<leader>b", "<Cmd>lua require'dap'.toggle_breakpoint()<CR>", { noremap = true})
 vim.api.nvim_set_keymap("n", "<leader>dr", "<Cmd>lua require'dap'.repl.open()<CR>", { noremap = true})
 
+-- LuaSnip
+vim.api.nvim_set_keymap("i", "<Tab>", "<Cmd>lua require'luasnip'.jump(1)<CR>", { noremap = true })
+vim.api.nvim_set_keymap("i", "<S-Tab>", "<Cmd>lua require'luasnip'.jump(-1)<CR>", { noremap = true })
+vim.api.nvim_set_keymap("s", "<Tab>", "<Cmd>lua require'luasnip'.jump(1)<CR>", { noremap = true })
+vim.api.nvim_set_keymap("s", "<S-Tab>", "<Cmd>lua require'luasnip'.jump(-1)<CR>", { noremap = true })
+
 vim.opt.number = true
 vim.opt.signcolumn = "yes"
 vim.opt.termguicolors = true
@@ -55,6 +61,7 @@ vim.opt.clipboard = "unnamedplus"
 vim.opt.hidden = true
 vim.opt.cursorline = true
 vim.opt.hlsearch = false
+vim.opt.wrap = false
 
 vim.cmd("autocmd FileType text lua require 'cmp'.setup.buffer { sources = {} }")
 vim.cmd("autocmd FileType yaml setlocal indentkeys-=0#")
@@ -64,7 +71,8 @@ vim.cmd("autocmd FileType yaml setlocal indentkeys-=0#")
 require('onedark').setup {
     style = 'darker',
     colors = {
-        bg0 = '#080808'
+        bg0 = '#080808',
+        bg1 = '#151515'
     }
 }
 require('onedark').load()
@@ -157,19 +165,26 @@ local on_attach = function(client, bufnr)
     -- buf_set_keymap("n", "<space>f", "<cmd>lua vim.lsp.buf.formatting()<CR>", opts)
 end
 
+local capabilities = require("cmp_nvim_lsp").update_capabilities(vim.lsp.protocol.make_client_capabilities())
+
+
 require "clangd_extensions".setup {
     server = {
-        cmd = {"/home/mike/.local/bin/runlsp.sh", "clangd-14"},
+        cmd = {"/home/mike/.local/bin/runlsp.sh", "clangd-14 --background-index --clang-tidy"},
         on_attach = on_attach,
-        capabilities = require("cmp_nvim_lsp").update_capabilities(vim.lsp.protocol.make_client_capabilities()),
+        capabilities = capabilities,
     },
 }
 nvim_lsp["pyright"].setup {
+    before_init = function(params)
+        params.processId = vim.NIL
+        end,
+    cmd = {"/home/mike/.local/bin/runlsp.sh", "/home/mike/.local/bin/pyright-langserver --stdio"},
     on_attach = on_attach,
     flags = {
         debounce_text_changes = 150
     },
-    capabilities = require("cmp_nvim_lsp").update_capabilities(vim.lsp.protocol.make_client_capabilities()),
+    capabilities = capabilities,
 }
 
 nvim_lsp["rust_analyzer"].setup {
@@ -177,7 +192,16 @@ nvim_lsp["rust_analyzer"].setup {
     flags = {
         debounce_text_changes = 150
     },
-    capabilities = require("cmp_nvim_lsp").update_capabilities(vim.lsp.protocol.make_client_capabilities()),
+    capabilities = capabilities,
+}
+
+nvim_lsp["tsserver"].setup {
+    cmd = {"/usr/bin/typescript-language-server", "--stdio", "--tsserver-path=/usr/lib/node_modules/typescript-language-server/lib/"},
+    on_attach = on_attach,
+    flags = {
+        debounce_text_changes = 150
+    },
+    capabilities = capabilities,
 }
 
 -- Lua LSP stuff
@@ -205,6 +229,9 @@ nvim_lsp["sumneko_lua"].setup {
             -- Do not send telemetry data containing a randomized but unique identifier
             telemetry = {
                 enable = false
+            },
+            completion = {
+                callSnippet = 'Replace'
             }
         }
     },
@@ -213,6 +240,34 @@ nvim_lsp["sumneko_lua"].setup {
         debounce_text_changes = 150,
     },
     capabilities = require("cmp_nvim_lsp").update_capabilities(vim.lsp.protocol.make_client_capabilities())
+}
+
+local kind_icons = {
+  Text = "",
+  Method = "",
+  Function = "",
+  Constructor = "",
+  Field = "",
+  Variable = "",
+  Class = "ﴯ",
+  Interface = "",
+  Module = "",
+  Property = "ﰠ",
+  Unit = "",
+  Value = "",
+  Enum = "",
+  Keyword = "",
+  Snippet = "",
+  Color = "",
+  File = "",
+  Reference = "",
+  Folder = "",
+  EnumMember = "",
+  Constant = "",
+  Struct = "",
+  Event = "",
+  Operator = "",
+  TypeParameter = ""
 }
 
 local cmp = require('cmp')
@@ -228,7 +283,7 @@ cmp.setup(
             ["<C-f>"] = cmp.mapping.scroll_docs(4),
             ["<C-Space>"] = cmp.mapping.complete(),
             ["<C-e>"] = cmp.mapping.close(),
-            ["<CR>"] = cmp.mapping.confirm({ select = false }), -- Accept currently selected item. Set `select` to `false` to only confirm explicitly selected items.
+            ["<CR>"] = cmp.mapping.confirm({ select = true }), -- Accept currently selected item. Set `select` to `false` to only confirm explicitly selected items.
         }),
         sources = {
             {name = "nvim_lsp"},
@@ -244,7 +299,15 @@ cmp.setup(
                 cmp.config.compare.offset,
                 cmp.config.compare.order,
             }
-        }
+        },
+        formatting = {
+            format = function(entry, vim_item)
+              vim_item.abbr = string.sub(vim_item.abbr, 1, 30)
+              -- Kind icons
+              vim_item.kind = string.format('%s %s', kind_icons[vim_item.kind], vim_item.kind) -- This concatonates the icons with the name of the item kind
+              return vim_item
+            end
+        },
     }
 )
 
