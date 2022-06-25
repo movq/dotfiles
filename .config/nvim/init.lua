@@ -389,3 +389,6 @@ dap.configurations.cpp = {
 }
 dap.configurations.c = dap.configurations.cpp
 dap.configurations.rust = dap.configurations.cpp
+
+vim.opt.guifont = "JetBrainsMono Nerd Font Mono:h16"
+vim.g.neovide_cursor_animation_length = 0
