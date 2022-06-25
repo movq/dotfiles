@@ -40,12 +40,6 @@ vim.api.nvim_set_keymap("n", "<F12>", "<Cmd>lua require'dap'.step_out()<CR>", { 
 vim.api.nvim_set_keymap("n", "<leader>b", "<Cmd>lua require'dap'.toggle_breakpoint()<CR>", { noremap = true})
 vim.api.nvim_set_keymap("n", "<leader>dr", "<Cmd>lua require'dap'.repl.open()<CR>", { noremap = true})
 
--- LuaSnip
-vim.api.nvim_set_keymap("i", "<Tab>", "<Cmd>lua require'luasnip'.jump(1)<CR>", { noremap = true })
-vim.api.nvim_set_keymap("i", "<S-Tab>", "<Cmd>lua require'luasnip'.jump(-1)<CR>", { noremap = true })
-vim.api.nvim_set_keymap("s", "<Tab>", "<Cmd>lua require'luasnip'.jump(1)<CR>", { noremap = true })
-vim.api.nvim_set_keymap("s", "<S-Tab>", "<Cmd>lua require'luasnip'.jump(-1)<CR>", { noremap = true })
-
 vim.opt.number = true
 vim.opt.signcolumn = "yes"
 vim.opt.termguicolors = true
@@ -188,16 +182,15 @@ nvim_lsp["pyright"].setup {
     capabilities = capabilities,
 }
 
-nvim_lsp["rust_analyzer"].setup {
-    on_attach = on_attach,
-    flags = {
-        debounce_text_changes = 150
-    },
-    capabilities = capabilities,
+require("rust-tools").setup {
+    server = {
+        on_attach = on_attach,
+        capabilities = capabilities,
+    }
 }
 
 nvim_lsp["tsserver"].setup {
-    cmd = {"/usr/bin/typescript-language-server", "--stdio", "--tsserver-path=/usr/lib/node_modules/typescript-language-server/lib/"},
+    cmd = {"typescript-language-server", "--stdio", "--tsserver-path=/usr/lib/node_modules/typescript-language-server/lib/"},
     on_attach = on_attach,
     flags = {
         debounce_text_changes = 150
@@ -210,7 +203,7 @@ local runtime_path = vim.split(package.path, ";")
 table.insert(runtime_path, "lua/?.lua")
 table.insert(runtime_path, "lua/?/init.lua")
 nvim_lsp["sumneko_lua"].setup {
-    cmd = {"lua-language-server", "-E", vim.env.HOME .. "/src/lua-language-server/main.lua"},
+    cmd = {"lua-language-server"},
     settings = {
         Lua = {
             runtime = {
@@ -240,8 +233,12 @@ nvim_lsp["sumneko_lua"].setup {
     flags = {
         debounce_text_changes = 150,
     },
-    capabilities = require("cmp_nvim_lsp").update_capabilities(vim.lsp.protocol.make_client_capabilities())
+    capabilities = capabilities,
 }
+
+vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, {
+    border = "rounded",
+})
 
 local kind_icons = {
   Text = "",
@@ -271,6 +268,11 @@ local kind_icons = {
   TypeParameter = ""
 }
 
+local has_words_before = function()
+  local line, col = unpack(vim.api.nvim_win_get_cursor(0))
+  return col ~= 0 and vim.api.nvim_buf_get_lines(0, line - 1, line, true)[1]:sub(col, col):match("%s") == nil
+end
+
 local cmp = require('cmp')
 cmp.setup(
     {
@@ -280,16 +282,43 @@ cmp.setup(
             end,
         },
         mapping = cmp.mapping.preset.insert ({
+            ['<C-n>'] = {
+              i = cmp.mapping.select_next_item({ behavior = cmp.SelectBehavior.Select }),
+            },
+            ['<C-p>'] = {
+              i = cmp.mapping.select_prev_item({ behavior = cmp.SelectBehavior.Select }),
+            },
+            ['<C-y>'] = {
+              i = cmp.mapping.confirm({ select = false }),
+            },
             ["<C-d>"] = cmp.mapping.scroll_docs(-4),
             ["<C-f>"] = cmp.mapping.scroll_docs(4),
             ["<C-Space>"] = cmp.mapping.complete(),
             ["<C-e>"] = cmp.mapping.close(),
             ["<CR>"] = cmp.mapping.confirm({ select = true }), -- Accept currently selected item. Set `select` to `false` to only confirm explicitly selected items.
+            ["<Tab>"] = cmp.mapping(function(fallback)
+                local luasnip = require("luasnip")
+                if luasnip.expand_or_jumpable() then
+                    luasnip.expand_or_jump()
+                elseif has_words_before() then
+                    cmp.complete()
+                else
+                    fallback()
+                end
+            end, { "i", "s" }),
+            ["<S-Tab>"] = cmp.mapping(function(fallback)
+                local luasnip = require("luasnip")
+                if luasnip.jumpable(-1) then
+                    luasnip.jump(-1)
+                else
+                    fallback()
+                end
+            end, { "i", "s" }),
         }),
         sources = {
             {name = "nvim_lsp"},
             {name = "luasnip"},
-            {name = "buffer"}
+            {name = "buffer"},
         },
         sorting = {
             comparators = {
@@ -303,11 +332,22 @@ cmp.setup(
         },
         formatting = {
             format = function(entry, vim_item)
-              vim_item.abbr = string.sub(vim_item.abbr, 1, 30)
+              vim_item.abbr = string.sub(vim_item.abbr, 1, 50)
               -- Kind icons
               vim_item.kind = string.format('%s %s', kind_icons[vim_item.kind], vim_item.kind) -- This concatonates the icons with the name of the item kind
               return vim_item
             end
+        },
+        window = {
+            completion = {
+                border = 'rounded',
+            },
+            documentation = {
+                border = 'rounded',
+            },
+        },
+        experimental = {
+            ghost_text = true,
         },
     }
 )

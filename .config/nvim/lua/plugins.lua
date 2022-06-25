@@ -10,6 +10,7 @@ return require("packer").startup(
         use "L3MON4D3/LuaSnip"
         use "saadparwaiz1/cmp_luasnip"
         use "p00f/clangd_extensions.nvim"
+        use "simrat39/rust-tools.nvim"
         use {
             "hrsh7th/nvim-cmp",
             requires = {
@@ -21,6 +22,7 @@ return require("packer").startup(
         }
         use "nvim-lua/lsp-status.nvim"
         use "simrat39/symbols-outline.nvim"
+        use "ray-x/lsp_signature.nvim"
         use "mfussenegger/nvim-dap"
         use "nvim-treesitter/nvim-treesitter"
         use {
