@@ -31,16 +31,16 @@ floating_modifier $mod
 hide_edge_borders smart
 
 # start a terminal
-bindsym $mod+Return exec footclient
+bindsym $mod+Return exec alacritty &
 
 # start a web browser
-bindsym $mod+Shift+Return exec firefox&
+bindsym $mod+Shift+Return exec firefox &
 
 # kill focused window
 bindsym $mod+Shift+apostrophe kill
 
 # rofi app and window launchers
-bindsym $mod+e exec wofi --show drun -i -I
+bindsym $mod+e exec wofi --show drun
 bindsym $mod+Shift+e exec wofi --show run
 
 # change focus
@@ -164,7 +164,7 @@ bindsym $mod+Escape exec swaylock -f
 # put the system to sleep
 bindsym $mod+Shift+o exec systemctl suspend
 
-bindsym $mod+j exec pcmanfm-qt
+bindsym $mod+j exec thunar
 
 bindsym $mod+apostrophe exec makoctl dismiss -a
 
@@ -191,9 +191,9 @@ popup_during_fullscreen smart
 focus_follows_mouse yes
 
 # Media player controls
-bindsym XF86AudioPlay exec playerctl -p mpd play-pause
-bindsym XF86AudioNext exec playerctl -p mpd next
-bindsym XF86AudioPrev exec playerctl -p mpd previous
+bindsym XF86AudioPlay exec playerctl play-pause
+bindsym XF86AudioNext exec playerctl next
+bindsym XF86AudioPrev exec playerctl previous
 
 bindsym XF86AudioRaiseVolume exec pactl set-sink-volume @DEFAULT_SINK@ +2%
 bindsym XF86AudioLowerVolume exec pactl set-sink-volume @DEFAULT_SINK@ -2%
