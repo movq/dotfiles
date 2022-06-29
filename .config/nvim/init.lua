@@ -31,14 +31,16 @@ vim.api.nvim_set_keymap("n", "<C-k>", ":Telescope lsp_workspace_symbols <CR>", {
 vim.api.nvim_set_keymap("n", "<C-l>", ":SymbolsOutline<CR>", { noremap = true})
 
 vim.api.nvim_set_keymap("n", "<leader>td", "<Plug>(toggle-lsp-diag)", { noremap = true})
-
 -- DAP
 vim.api.nvim_set_keymap("n", "<F5>", "<Cmd>lua require'dap'.continue()<CR>", { noremap = true})
 vim.api.nvim_set_keymap("n", "<F10>", "<Cmd>lua require'dap'.step_over()<CR>", { noremap = true})
 vim.api.nvim_set_keymap("n", "<F11>", "<Cmd>lua require'dap'.step_into()<CR>", { noremap = true})
 vim.api.nvim_set_keymap("n", "<F12>", "<Cmd>lua require'dap'.step_out()<CR>", { noremap = true})
+
 vim.api.nvim_set_keymap("n", "<leader>b", "<Cmd>lua require'dap'.toggle_breakpoint()<CR>", { noremap = true})
 vim.api.nvim_set_keymap("n", "<leader>dr", "<Cmd>lua require'dap'.repl.open()<CR>", { noremap = true})
+vim.api.nvim_set_keymap("n", "<leader>dk", "<Cmd>lua require'dapui'.eval()<CR>", { noremap = true})
+vim.api.nvim_set_keymap("n", "<leader>dt", "<Cmd>lua require'dapui'.toggle()<CR>", { noremap = true})
 
 vim.opt.number = true
 vim.opt.signcolumn = "yes"
@@ -70,8 +72,8 @@ require('onedark').setup {
     }
 }
 require('onedark').load()
-vim.cmd("highlight ExtraWhitespace guibg=red")
-vim.cmd("match ExtraWhitespace /\\s\\+$/")
+-- vim.cmd("highlight ExtraWhitespace guibg=red")
+-- vim.cmd("match ExtraWhitespace /\\s\\+$/")
 
 require('autosave').setup {}
 
@@ -165,20 +167,18 @@ local capabilities = require("cmp_nvim_lsp").update_capabilities(vim.lsp.protoco
 
 require "clangd_extensions".setup {
     server = {
-        cmd = {"/home/mike/.local/bin/runlsp.sh", "clangd-14 --background-index --clang-tidy"},
+        cmd = {"clangd", "--background-index", "--clang-tidy", "--completion-style=detailed"},
         on_attach = on_attach,
         capabilities = capabilities,
     },
 }
+
 nvim_lsp["pyright"].setup {
     before_init = function(params)
         params.processId = vim.NIL
         end,
-    cmd = {"/home/mike/.local/bin/runlsp.sh", "/home/mike/.local/bin/pyright-langserver --stdio"},
+    cmd = {"pyright-langserver", "--stdio"},
     on_attach = on_attach,
-    flags = {
-        debounce_text_changes = 150
-    },
     capabilities = capabilities,
 }
 
@@ -192,9 +192,22 @@ require("rust-tools").setup {
 nvim_lsp["tsserver"].setup {
     cmd = {"typescript-language-server", "--stdio", "--tsserver-path=/usr/lib/node_modules/typescript-language-server/lib/"},
     on_attach = on_attach,
-    flags = {
-        debounce_text_changes = 150
+    capabilities = capabilities,
+    settings = {
+        completions = {
+            completeFunctionCalls = true,
+        },
     },
+    init_options = {
+        preferences = {
+          includeCompletionsWithSnippetText = true,
+          includeCompletionsForImportStatements = true,
+        },
+    },
+}
+
+nvim_lsp["gopls"].setup {
+    on_attach = on_attach,
     capabilities = capabilities,
 }
 
@@ -239,6 +252,9 @@ nvim_lsp["sumneko_lua"].setup {
 vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, {
     border = "rounded",
 })
+vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.signature_help, {
+    border = "rounded"
+})
 
 local kind_icons = {
   Text = "",
@@ -276,6 +292,10 @@ end
 local cmp = require('cmp')
 cmp.setup(
     {
+        enabled = function ()
+            return vim.api.nvim_buf_get_option(0, "buftype") ~= "prompt"
+              or require("cmp_dap").is_dap_buffer()
+        end,
         snippet = {
             expand = function(args)
                 require('luasnip').lsp_expand(args.body)
@@ -319,6 +339,7 @@ cmp.setup(
             {name = "nvim_lsp"},
             {name = "luasnip"},
             {name = "buffer"},
+            {name = "dap"},
         },
         sorting = {
             comparators = {
@@ -358,37 +379,13 @@ dap.adapters.python = {
   command = 'python',
   args = { '-m', 'debugpy.adapter' };
 }
-dap.configurations.python = {
-  {
-    type = 'python';
-    request = 'launch';
-    name = "Launch file";
-    program = "${file}";
-    pythonPath = function()
-      return '/usr/bin/python'
-    end;
-  },
-}
 dap.adapters.lldb = {
   type = 'executable',
   command = '/usr/bin/lldb-vscode', -- adjust as needed, must be absolute path
   name = 'lldb'
 }
-dap.configurations.cpp = {
-  {
-    name = 'Launch',
-    type = 'lldb',
-    request = 'launch',
-    program = function()
-      return vim.fn.input('Path to executable: ', vim.fn.getcwd() .. '/', 'file')
-    end,
-    cwd = '${workspaceFolder}',
-    stopOnEntry = false,
-    args = {},
-  }
-}
-dap.configurations.c = dap.configurations.cpp
-dap.configurations.rust = dap.configurations.cpp
+
+require("dapui").setup {}
 
 vim.opt.guifont = "JetBrainsMono Nerd Font Mono:h16"
 vim.g.neovide_cursor_animation_length = 0

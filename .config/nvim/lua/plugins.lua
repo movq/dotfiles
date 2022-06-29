@@ -20,10 +20,12 @@ return require("packer").startup(
                 "hrsh7th/nvim-cmp"
             },
         }
+        use "rcarriga/cmp-dap"
         use "nvim-lua/lsp-status.nvim"
         use "simrat39/symbols-outline.nvim"
         use "ray-x/lsp_signature.nvim"
         use "mfussenegger/nvim-dap"
+        use "rcarriga/nvim-dap-ui"
         use "nvim-treesitter/nvim-treesitter"
         use {
             "nvim-telescope/telescope.nvim",
