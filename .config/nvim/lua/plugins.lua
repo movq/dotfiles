@@ -34,5 +34,6 @@ return require("packer").startup(
         use "WhoIsSethDaniel/toggle-lsp-diagnostics.nvim"
         use "lewis6991/gitsigns.nvim"
         use "feline-nvim/feline.nvim"
+        use "tpope/vim-sleuth"
     end
 )
