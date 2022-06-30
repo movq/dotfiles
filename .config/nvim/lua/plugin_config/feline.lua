@@ -75,6 +75,7 @@ M.active[2] = {
     },
 }
 
-M.inactive = M.active
+M.inactive = vim.deepcopy(M.active)
+M.inactive[1][2]['hl']['style'] = 'NONE'
 
 return M
