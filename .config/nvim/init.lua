@@ -59,6 +59,8 @@ vim.opt.cursorline = true
 vim.opt.hlsearch = false
 vim.opt.wrap = false
 
+vim.g.rust_recommended_style = false
+
 vim.cmd("autocmd FileType text lua require 'cmp'.setup.buffer { sources = {} }")
 vim.cmd("autocmd FileType yaml setlocal indentkeys-=0#")
 
@@ -73,7 +75,8 @@ require("onedark").setup({
 })
 require("onedark").load()
 
-require("autosave").setup({})
+require("autosave").setup()
+require("guess-indent").setup()
 
 require("nvim-tree").setup({
 	update_cwd = true,
