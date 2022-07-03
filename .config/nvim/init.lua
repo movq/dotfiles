@@ -18,6 +18,9 @@ vim.api.nvim_set_keymap("", "<C-t>", "<C-w>k", { noremap = true })
 vim.api.nvim_set_keymap("", "<C-s>", "<C-w>l", { noremap = true })
 
 vim.api.nvim_set_keymap("n", "<C-w>", ":bp|bd#<CR>", { noremap = true })
+vim.api.nvim_set_keymap("n", "]b", ":bnext<CR>", {})
+vim.api.nvim_set_keymap("n", "[b", ":bprevious<CR>", {})
+vim.api.nvim_set_keymap("n", "[q", ":quit<CR>", {})
 
 vim.api.nvim_set_keymap("n", "<C-e>", ":NvimTreeToggle<CR>", { noremap = true })
 vim.api.nvim_set_keymap("n", "<leader>r", ":NvimTreeRefresh<CR>", { noremap = true })
