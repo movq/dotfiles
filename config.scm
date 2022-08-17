@@ -1,11 +1,27 @@
-(use-modules (gnu))
-(use-modules (nongnu packages linux))
+(use-modules (gnu)
+             (guix channels)
+             (guix inferior)
+             (nongnu packages linux)
+             (srfi srfi-1))
 
 (use-service-modules dbus desktop networking security-token ssh)
-(use-package-modules certs ssh)
+(use-package-modules certs package-management security-token ssh)
+
+(define kernel-channels
+  (list (channel
+          (name 'guix)
+          (url "https://github.com/movq/guix.git")
+          (commit "9b5e340c1d6c8b5e7da2657e1888dbf841cdba40"))
+        (channel
+          (name 'nonguix)
+          (url "https://github.com/movq/nonguix.git")
+          (commit "3a813fb42842062bd2c598bc951dabba58bb7e90"))))
+
+(define kernel-inferior
+  (inferior-for-channels kernel-channels))
 
 (operating-system
-  (kernel linux-movq-xps13)
+  (kernel (first (lookup-inferior-packages kernel-inferior "linux-movq-xps13")))
   (initrd-modules (list "nvme" "dm-crypt"))
   (firmware (append (list atheros-firmware i915-firmware)
                     %base-firmware))
@@ -67,18 +83,35 @@
 
   (packages (cons nss-certs %base-packages))
 
-  (services (append (list fontconfig-file-system-service
-                          (service network-manager-service-type)
-                          (service wpa-supplicant-service-type)
-                          (service openssh-service-type
-                                   (openssh-configuration
-                                    (openssh openssh-sans-x)
-                                    (port-number 2222)))
-                          (udisks-service)
-                          (service polkit-service-type)
-                          (elogind-service)
-                          (dbus-service)
-                          (service pcscd-service-type)
-                          (bluetooth-service #:auto-enable? #t)
-                          )
-                    %base-services)))
+
+  (services 
+    (let ((my-services (modify-services %base-services
+                         (guix-service-type config =>
+                            (guix-configuration
+                              (inherit config)
+                              (substitute-urls
+                                (list "https://ci.guix.gnu.org"
+                                      "https://bordeaux.guix.gnu.org"
+                                      "https://substitutes.nonguix.org"))
+                              (authorized-keys
+                                (list (file-append guix "/share/guix/berlin.guix.gnu.org.pub")
+                                      (file-append guix "/share/guix/bordeaux.guix.gnu.org.pub")
+                                      (plain-file "inspiron.pub" "(public-key(ecc(curve Ed25519)(q #3D538437832F3FFC9A9B44E928021978B0C2D1A16F4C1272284FB2851BA80F5F#)))")
+                                      (plain-file "nonguix.pub" "(public-key(ecc(curve Ed25519)(q #C1FD53E5D4CE971933EC50C9F307AE2171A2D3B52C804642A7A35F84F3A4EA98#)))"))))))))
+      (append (list
+                fontconfig-file-system-service
+                (service network-manager-service-type)
+                (service wpa-supplicant-service-type)
+                (service openssh-service-type
+                         (openssh-configuration
+                         (openssh openssh-sans-x)))
+                (udisks-service)
+                (service polkit-service-type)
+                (elogind-service #:config
+                                 (elogind-configuration
+                                   (handle-lid-switch-external-power 'suspend)))
+                (dbus-service)
+                (service pcscd-service-type)
+                (bluetooth-service #:auto-enable? #t)
+                (udev-rules-service 'u2f libu2f-host #:groups '("plugdev")))
+                my-services))))
