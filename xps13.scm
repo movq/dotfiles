@@ -1,6 +1,9 @@
 (use-modules (gnu)
+             (gnu system setuid)
              (guix channels)
              (guix inferior)
+             (movq packages linux)
+             (movq system mapped-devices)
              (nongnu packages linux)
              (srfi srfi-1))
 
@@ -10,25 +13,37 @@
 (define kernel-channels
   (list (channel
           (name 'guix)
-          (url "https://github.com/movq/guix.git")
-          (commit "9b5e340c1d6c8b5e7da2657e1888dbf841cdba40"))
+          (url "https://git.savannah.gnu.org/git/guix.git")
+          (commit "6c2e14a43a86258204e19fe5cbac4a77374bab3f"))
         (channel
           (name 'nonguix)
-          (url "https://github.com/movq/nonguix.git")
-          (commit "3a813fb42842062bd2c598bc951dabba58bb7e90"))))
+          (url "https://gitlab.com/nonguix/nonguix")
+          (commit "af4fc4fb6a2350f7dbb62fbc9479ad77680600e6"))
+        (channel
+          (name 'movq-guix)
+          (url "https://git.sr.ht/~movq/movq-guix")
+          (commit "9319f3bd84b549ddf936d3e24f329709d6c417e5")
+          (introduction
+            (make-channel-introduction
+              "85a5f800bacd22f899816fe976b613fbba43ad24"
+              (openpgp-fingerprint
+                "4914197BEB999068EF4FE6003653478810E355A4"))))))
 
 (define kernel-inferior
   (inferior-for-channels kernel-channels))
 
 (operating-system
   (kernel (first (lookup-inferior-packages kernel-inferior "linux-movq-xps13")))
+  (kernel-arguments (append (list "mem_sleep_default=deep"
+                                  "pci=noaer"
+                                  "mitigations=off")
+                            %default-kernel-arguments))
   (initrd-modules (list "nvme" "dm-crypt"))
-  (firmware (append (list atheros-firmware i915-firmware)
-                    %base-firmware))
+  (firmware (list atheros-firmware i915-firmware))
   (host-name "mike-xps")
   (timezone "Europe/London")
   (locale "en_GB.utf8")
-  (keyboard-layout (keyboard-layout "gb" "dvorak"))
+  (keyboard-layout (keyboard-layout "gb" "dvorak" #:options (list "ctrl:swapcaps")))
 
   (bootloader (bootloader-configuration
                 (bootloader grub-efi-bootloader)
@@ -44,7 +59,7 @@
       (mapped-device
         (source (uuid "ef303222-1ac9-4116-9c1f-bc334957a797"))
         (target "luks-ef303222-1ac9-4116-9c1f-bc334957a797")
-        (type luks-device-mapping))))
+        (type luks-device-mapping-discard))))
 
   (file-systems (append
                   (list (file-system
@@ -81,7 +96,7 @@
   (sudoers-file (plain-file "sudoers" "root ALL=(ALL) ALL
 %wheel ALL=(ALL) NOPASSWD: ALL"))
 
-  (packages (cons nss-certs %base-packages))
+  (packages (append (list nss-certs) %base-packages))
 
 
   (services 
@@ -99,19 +114,36 @@
                                       (plain-file "inspiron.pub" "(public-key(ecc(curve Ed25519)(q #3D538437832F3FFC9A9B44E928021978B0C2D1A16F4C1272284FB2851BA80F5F#)))")
                                       (plain-file "nonguix.pub" "(public-key(ecc(curve Ed25519)(q #C1FD53E5D4CE971933EC50C9F307AE2171A2D3B52C804642A7A35F84F3A4EA98#)))"))))))))
       (append (list
+                ;(service gdm-service-type
+                ;  (gdm-configuration))
+                polkit-wheel-service
                 fontconfig-file-system-service
                 (service network-manager-service-type)
                 (service wpa-supplicant-service-type)
+                ;(simple-service 'network-manager-applet
+                ;         profile-service-type
+                ;         (list network-manager-applet))
+
                 (service openssh-service-type
                          (openssh-configuration
                          (openssh openssh-sans-x)))
+
                 (udisks-service)
+                (service upower-service-type)
+                (accountsservice-service)
+                (service colord-service-type)
+                (geoclue-service)
                 (service polkit-service-type)
                 (elogind-service #:config
                                  (elogind-configuration
                                    (handle-lid-switch-external-power 'suspend)))
                 (dbus-service)
+
+                x11-socket-directory-service
+
                 (service pcscd-service-type)
                 (bluetooth-service #:auto-enable? #t)
-                (udev-rules-service 'u2f libu2f-host #:groups '("plugdev")))
-                my-services))))
+                (udev-rules-service 'u2f libu2f-host #:groups '("plugdev"))
+
+                )
+              my-services))))
