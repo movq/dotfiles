@@ -13,16 +13,21 @@
 (define kernel-channels
   (list (channel
           (name 'guix)
-          (url "https://git.savannah.gnu.org/git/guix.git")
-          (commit "6c2e14a43a86258204e19fe5cbac4a77374bab3f"))
+          (url "https://github.com/movq/guix.git")
+          (commit "50fd5987298b9deb507f5beba7c6dcf396e58673")
+          (introduction
+            (make-channel-introduction
+              "9edb3f66fd807b096b48283debdcddccfea34bad"
+              (openpgp-fingerprint
+                "BBB0 2DDF 2CEA F6A8 0D1D  E643 A2A0 6DF2 A33A 54FA"))))
         (channel
           (name 'nonguix)
-          (url "https://gitlab.com/nonguix/nonguix")
-          (commit "af4fc4fb6a2350f7dbb62fbc9479ad77680600e6"))
+          (url "https://github.com/movq/nonguix.git")
+          (commit "bba908b38dee4458079b2574ef968a347bbe30e9"))
         (channel
           (name 'movq-guix)
           (url "https://git.sr.ht/~movq/movq-guix")
-          (commit "9319f3bd84b549ddf936d3e24f329709d6c417e5")
+          (commit "f876ea646b34728805dd4bfca4ca4780a2da3023")
           (introduction
             (make-channel-introduction
               "85a5f800bacd22f899816fe976b613fbba43ad24"
