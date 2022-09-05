@@ -1,34 +1,4 @@
-(add-to-list 'load-path "~/.emacs.d/plugins/atom-one-dark-theme")
-(add-to-list 'load-path "~/.emacs.d/plugins/alert")
-(add-to-list 'load-path "~/.emacs.d/plugins/all-the-icons.el")
 (add-to-list 'load-path "~/.emacs.d/plugins/company-mode")
-(add-to-list 'load-path "~/.emacs.d/plugins/dash.el")
-(add-to-list 'load-path "~/.emacs.d/plugins/elisp-tree-sitter")
-(add-to-list 'load-path "~/.emacs.d/plugins/emacs-neotree")
-(add-to-list 'load-path "~/.emacs.d/plugins/erc-hl-nicks")
-(add-to-list 'load-path "~/.emacs.d/plugins/evil")
-(add-to-list 'load-path "~/.emacs.d/plugins/f.el")
-(add-to-list 'load-path "~/.emacs.d/plugins/flycheck")
-(add-to-list 'load-path "~/.emacs.d/plugins/geiser/elisp")
-(add-to-list 'load-path "~/.emacs.d/plugins/guile")
-(add-to-list 'load-path "~/.emacs.d/plugins/ht.el")
-(add-to-list 'load-path "~/.emacs.d/plugins/hydra")
-(add-to-list 'load-path "~/.emacs.d/plugins/key-chord")
-(add-to-list 'load-path "~/.emacs.d/plugins/lsp-mode")
-(add-to-list 'load-path "~/.emacs.d/plugins/lsp-mode/clients")
-(add-to-list 'load-path "~/.emacs.d/plugins/lsp-ui")
-(add-to-list 'load-path "~/.emacs.d/plugins/markdown-mode")
-(add-to-list 'load-path "~/.emacs.d/plugins/misc")
-(add-to-list 'load-path "~/.emacs.d/plugins/mu4e-alert")
-(add-to-list 'load-path "~/.emacs.d/plugins/pfuture")
-(add-to-list 'load-path "~/.emacs.d/plugins/prescient.el")
-(add-to-list 'load-path "~/.emacs.d/plugins/projectile")
-(add-to-list 'load-path "~/.emacs.d/plugins/rust-mode")
-(add-to-list 'load-path "~/.emacs.d/plugins/s.el")
-(add-to-list 'load-path "~/.emacs.d/plugins/shrink-path.el")
-(add-to-list 'load-path "~/.emacs.d/plugins/spinner.el")
-(add-to-list 'load-path "~/.emacs.d/plugins/swiper")
-(add-to-list 'load-path "~/.emacs.d/plugins/ZNC.el")
 (add-to-list 'custom-theme-load-path "~/.emacs.d/plugins/atom-one-dark-theme")
 (load-theme 'atom-one-dark t)
 (custom-set-faces
@@ -36,11 +6,24 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(default ((t (:family "JetBrainsMono Nerd Font Mono" :foundry "DAMA" :slant normal :weight normal :height 160 :width normal)))))
+ '(default ((t (:family "JetBrainsMono Nerd Font Mono" :foundry "DAMA" :slant normal :weight normal :height 170 :width normal :background "#080808"))))
+ '(fringe ((t (:background "#080808"))))
+ '(lsp-ui-doc-background ((t (:background "#151515"))))
+ '(markdown-code-face ((t (:inherit default))))
+ '(vterm-color-black ((t (:foreground "#282a2e" :background "#373b41"))))
+ '(vterm-color-red ((t (:foreground "#a54242" :background "#cc6666"))))
+ '(vterm-color-green ((t (:foreground "#8c9440" :background "#b5bd68"))))
+ '(vterm-color-yellow ((t (:foreground "#de935f" :background "#f0c674"))))
+ '(vterm-color-blue ((t (:foreground "#5f819d" :background "#81a2be"))))
+ '(vterm-color-magenta ((t (:foreground "#85678f" :background "#b294bb"))))
+ '(vterm-color-cyan ((t (:foreground "#5e8d87" :background "#8abeb7"))))
+ '(vterm-color-white ((t (:foreground "#707880" :background "#c5c8c6"))))
+ )
 
 (setq inhibit-startup-screen t)
 (menu-bar-mode -1)
 (tool-bar-mode -1)
+(scroll-bar-mode -1)
 (blink-cursor-mode 0)
 
 ; Evil stuff
@@ -66,31 +49,26 @@
   "gr" 'lsp-find-references
   ",k" 'movq-kill-current-buffer
   ",w" 'delete-other-windows
-  ",p" 'counsel-switch-buffer
+  ",b" 'counsel-switch-buffer
   ",f" 'counsel-find-file
-  (kbd "SPC p") 'counsel-file-jump
+  ",z" 'mpdel-playlist-open
+  (kbd "SPC p") 'projectile-switch-project
+  (kbd "SPC f") 'projectile-find-file
   (kbd "M-.") nil)
+
 (evil-define-key nil evil-motion-state-map
   "h" 'evil-backward-char
   "t" 'evil-previous-line
   "n" 'evil-next-line
   "s" 'evil-forward-char)
 
-;(evil-define-key 'normal neotree-mode-map (kbd "TAB") 'neotree-enter)
-;(evil-define-key 'normal neotree-mode-map (kbd "SPC") 'neotree-quick-look)
-;(evil-define-key 'normal neotree-mode-map (kbd "q") 'neotree-hide)
-;(evil-define-key 'normal neotree-mode-map (kbd "RET") 'neotree-enter)
-;(evil-define-key 'normal neotree-mode-map (kbd "g") 'neotree-refresh)
-;(evil-define-key 'normal neotree-mode-map (kbd "n") 'neotree-next-line)
-;(evil-define-key 'normal neotree-mode-map (kbd "t") 'neotree-previous-line)
-;(evil-define-key 'normal neotree-mode-map (kbd "A") 'neotree-stretch-toggle)
-;(evil-define-key 'normal neotree-mode-map (kbd "H") 'neotree-hidden-file-toggle)
-
 (define-key evil-motion-state-map ";" #'evil-ex)
 (key-chord-define evil-insert-state-map "hh" 'evil-normal-state)
-;(key-chord-define evil-normal-state-map "gd" 'lsp-find-definition)
-;(key-chord-define evil-normal-state-map "gD" 'lsp-find-declaration)
-;(key-chord-define evil-normal-state-map "gr" 'lsp-find-references)
+
+(evil-set-initial-state 'mpdel-playlist-mode 'emacs)
+(evil-set-initial-state 'mpdel-nav-mode 'emacs)
+(evil-set-initial-state 'dired-mode 'emacs)
+(evil-set-initial-state 'erc-mode 'normal)
 
 (require 'ivy)
 (require 'counsel)
@@ -115,6 +93,117 @@
 	  (lambda ()
 	    (local-set-key (kbd "M-.") 'geiser-edit-symbol-at-point)))
 
+(add-hook 'scheme-mode-hook
+          (lambda ()
+            (put 'eval-when 'scheme-indent-function 1)
+            (put 'call-with-prompt 'scheme-indent-function 1)
+            (put 'test-assert 'scheme-indent-function 1)
+            (put 'test-assertm 'scheme-indent-function 1)
+            (put 'test-equalm 'scheme-indent-function 1)
+            (put 'test-equal 'scheme-indent-function 1)
+            (put 'test-eq 'scheme-indent-function 1)
+            (put 'call-with-input-string 'scheme-indent-function 1)
+            (put 'call-with-port 'scheme-indent-function 1)
+            (put 'guard 'scheme-indent-function 1)
+            (put 'lambda* 'scheme-indent-function 1)
+            (put 'substitute* 'scheme-indent-function 1)
+            (put 'match-record 'scheme-indent-function 2)
+
+            ;; 'modify-inputs' and its keywords.
+            (put 'modify-inputs 'scheme-indent-function 1)
+            (put 'replace 'scheme-indent-function 1)
+
+            ;; 'modify-phases' and its keywords.
+            (put 'modify-phases 'scheme-indent-function 1)
+            (put 'replace 'scheme-indent-function 1)
+            (put 'add-before 'scheme-indent-function 2)
+            (put 'add-after 'scheme-indent-function 2)
+
+            (put 'modify-services 'scheme-indent-function 1)
+            (put 'with-directory-excursion 'scheme-indent-function 1)
+            (put 'with-file-lock 'scheme-indent-function 1)
+            (put 'with-file-lock/no-wait 'scheme-indent-function 1)
+            (put 'with-profile-lock 'scheme-indent-function 1)
+            (put 'with-writable-file 'scheme-indent-function 2)
+
+            (put 'package 'scheme-indent-function 0)
+            (put 'package/inherit 'scheme-indent-function 1)
+            (put 'origin 'scheme-indent-function 0)
+            (put 'build-system 'scheme-indent-function 0)
+            (put 'bag 'scheme-indent-function 0)
+            (put 'gexp->derivation 'scheme-indent-function 1)
+            (put 'graft 'scheme-indent-function 0)
+            (put 'operating-system 'scheme-indent-function 0)
+            (put 'file-system 'scheme-indent-function 0)
+            (put 'manifest-entry 'scheme-indent-function 0)
+            (put 'manifest-pattern 'scheme-indent-function 0)
+            (put 'substitute-keyword-arguments 'scheme-indent-function 1)
+            (put 'with-store 'scheme-indent-function 1)
+            (put 'with-external-store 'scheme-indent-function 1)
+            (put 'with-error-handling 'scheme-indent-function 0)
+            (put 'with-mutex 'scheme-indent-function 1)
+            (put 'with-atomic-file-output 'scheme-indent-function 1)
+            (put 'call-with-compressed-output-port 'scheme-indent-function 2)
+            (put 'call-with-decompressed-port 'scheme-indent-function 2)
+            (put 'call-with-gzip-input-port 'scheme-indent-function 1)
+            (put 'call-with-gzip-output-port 'scheme-indent-function 1)
+            (put 'call-with-lzip-input-port 'scheme-indent-function 1)
+            (put 'call-with-lzip-output-port 'scheme-indent-function 1)
+            (put 'signature-case 'scheme-indent-function 1)
+            (put 'emacs-batch-eval 'scheme-indent-function 0)
+            (put 'emacs-batch-edit-file 'scheme-indent-function 1)
+            (put 'emacs-substitute-sexps 'scheme-indent-function 1)
+            (put 'emacs-substitute-variables 'scheme-indent-function 1)
+            (put 'with-derivation-narinfo 'scheme-indent-function 1)
+            (put 'with-derivation-substitute 'scheme-indent-function 2)
+            (put 'with-status-report 'scheme-indent-function 1)
+            (put 'with-status-verbosity 'scheme-indent-function 1)
+            (put 'with-build-handler 'scheme-indent-function 1)
+
+            (put 'mlambda 'scheme-indent-function 1)
+            (put 'mlambdaq 'scheme-indent-function 1)
+            (put 'syntax-parameterize 'scheme-indent-function 1)
+            (put 'with-monad 'scheme-indent-function 1)
+            (put 'mbegin 'scheme-indent-function 1)
+            (put 'mwhen 'scheme-indent-function 1)
+            (put 'munless 'scheme-indent-function 1)
+            (put 'mlet* 'scheme-indent-function 2)
+            (put 'mlet 'scheme-indent-function 2)
+            (put 'mparameterize 'scheme-indent-function 2)
+            (put 'run-with-store 'scheme-indent-function 1)
+            (put 'run-with-state 'scheme-indent-function 1)
+            (put 'wrap-program 'scheme-indent-function 1)
+            (put 'wrap-script 'scheme-indent-function 1)
+            (put 'with-imported-modules 'scheme-indent-function 1)
+            (put 'with-extensions 'scheme-indent-function 1)
+            (put 'with-parameters 'scheme-indent-function 1)
+            (put 'let-system 'scheme-indent-function 1)
+            (put 'with-build-variables 'scheme-indent-function 2)
+
+            (put 'with-database 'scheme-indent-function 2)
+            (put 'call-with-database 'scheme-indent-function 1)
+            (put 'call-with-transaction 'scheme-indent-function 1)
+            (put 'with-statement 'scheme-indent-function 3)
+            (put 'call-with-retrying-transaction 'scheme-indent-function 1)
+            (put 'call-with-savepoint 'scheme-indent-function 1)
+            (put 'call-with-retrying-savepoint 'scheme-indent-function 1)
+
+            (put 'call-with-container 'scheme-indent-function 1)
+            (put 'container-excursion 'scheme-indent-function 1)
+            (put 'eventually 'scheme-indent-function 1)
+
+            (put 'call-with-progress-reporter 'scheme-indent-function 1)
+            (put 'with-repository 'scheme-indent-function 2)
+            (put 'with-temporary-git-repository 'scheme-indent-function 2)
+            (put 'with-environment-variables 'scheme-indent-function 1)
+            (put 'with-fresh-gnupg-setup 'scheme-indent-function 1)
+
+            (put 'with-paginated-output-port 'scheme-indent-function 1)
+
+            (put 'with-shepherd-action 'scheme-indent-function 3)
+
+            (put 'with-http-server 'scheme-indent-function 1)))
+
 (require 'company)
 (add-hook 'after-init-hook 'global-company-mode)
 
@@ -129,7 +218,7 @@
 	      c-basic-offset 4)
 
 (setq scroll-conservatively 101)
-(set-default 'truncate-lines t)
+;(set-default 'truncate-lines t)
 ;(global-display-line-numbers-mode)
 
 (setq frame-title-format
@@ -250,3 +339,13 @@
 (setq projectile-project-search-path '("~/src"))
 (projectile-mode)
 (add-to-list 'default-frame-alist '(background-color . "#080808"))
+
+(require 'mpdel)
+(setq libmpdel-hostname "/home/mike/.config/mpd/socket")
+(mpdel-mode)
+
+(put 'magit-clean 'disabled nil)
+
+(defalias 'yes-or-no-p 'y-or-n-p)
+
+(setq geiser-debug-jump-to-debug-p nil)
