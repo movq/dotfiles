@@ -3,7 +3,6 @@
              (guix channels)
              (guix inferior)
              (movq packages linux)
-             (movq system mapped-devices)
              (nongnu packages linux)
              (srfi srfi-1))
 
@@ -14,25 +13,15 @@
   (list (channel
          (name 'guix)
          (url "https://github.com/movq/guix.git")
-         (commit "50fd5987298b9deb507f5beba7c6dcf396e58673")
-         (introduction
-          (make-channel-introduction
-           "9edb3f66fd807b096b48283debdcddccfea34bad"
-           (openpgp-fingerprint
-            "BBB0 2DDF 2CEA F6A8 0D1D  E643 A2A0 6DF2 A33A 54FA"))))
+         (commit "2341b13962303ec9b6971901410948a8e299e180"))
         (channel
          (name 'nonguix)
          (url "https://github.com/movq/nonguix.git")
-         (commit "bba908b38dee4458079b2574ef968a347bbe30e9"))
+         (commit "da7072a222e62cdfaee819e17988d9ad3e8bf4d7"))
         (channel
          (name 'movq-guix)
          (url "https://git.sr.ht/~movq/movq-guix")
-         (commit "f876ea646b34728805dd4bfca4ca4780a2da3023")
-         (introduction
-          (make-channel-introduction
-           "85a5f800bacd22f899816fe976b613fbba43ad24"
-           (openpgp-fingerprint
-            "4914197BEB999068EF4FE6003653478810E355A4"))))))
+         (commit "68b64a7af62d97bf63b1ec5d176f5238a3e30b73"))))
 
 (define kernel-inferior
   (inferior-for-channels kernel-channels))
@@ -64,7 +53,7 @@
     (mapped-device
      (source (uuid "ef303222-1ac9-4116-9c1f-bc334957a797"))
      (target "luks-ef303222-1ac9-4116-9c1f-bc334957a797")
-     (type luks-device-mapping-discard))))
+     (type luks-device-mapping))))
 
   (file-systems (append
                  (list (file-system
@@ -110,25 +99,15 @@
                                            (guix-configuration
                                             (inherit config)
                                             (substitute-urls
-                                             (list "https://ci.guix.gnu.org"
-                                                   "https://bordeaux.guix.gnu.org"
-                                                   "https://substitutes.nonguix.org"))
+                                             (list "http://ulmo.vala.xyz:8080"))
                                             (authorized-keys
-                                             (list (file-append guix "/share/guix/berlin.guix.gnu.org.pub")
-                                                   (file-append guix "/share/guix/bordeaux.guix.gnu.org.pub")
-                                                   (plain-file "inspiron.pub" "(public-key(ecc(curve Ed25519)(q #3D538437832F3FFC9A9B44E928021978B0C2D1A16F4C1272284FB2851BA80F5F#)))")
-                                                   (plain-file "nonguix.pub" "(public-key(ecc(curve Ed25519)(q #C1FD53E5D4CE971933EC50C9F307AE2171A2D3B52C804642A7A35F84F3A4EA98#)))"))))))))
+                                             (list
+                                               (plain-file "ulmo" "(public-key(ecc(curve Ed25519)(q #39B5DF8F64652327ABB31D8939A186CA63FA707A881BD18253D85FE9345ED896#)))"))))))))
      (append (list
-                                        ;(service gdm-service-type
-                                        ;  (gdm-configuration))
               polkit-wheel-service
               fontconfig-file-system-service
               (service network-manager-service-type)
               (service wpa-supplicant-service-type)
-                                        ;(simple-service 'network-manager-applet
-                                        ;         profile-service-type
-                                        ;         (list network-manager-applet))
-
               (service openssh-service-type
                        (openssh-configuration
                         (openssh openssh-sans-x)))
