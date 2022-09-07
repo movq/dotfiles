@@ -1,4 +1,5 @@
 (add-to-list 'load-path "~/.emacs.d/plugins/company-mode")
+(add-to-list 'load-path "~/.emacs.d/plugins/lsp-pyright")
 (add-to-list 'custom-theme-load-path "~/.emacs.d/plugins/atom-one-dark-theme")
 (load-theme 'atom-one-dark t)
 (custom-set-faces
@@ -216,6 +217,7 @@
 ; C
 (setq-default c-default-style "linux"
 	      c-basic-offset 4)
+(c-set-offset 'innamespace 0)
 
 (setq scroll-conservatively 101)
 ;(set-default 'truncate-lines t)
@@ -289,6 +291,7 @@
 (require 'lsp-ui)
 (require 'lsp-clangd)
 (require 'lsp-rust)
+(require 'lsp-pyright)
 
 (add-hook 'c++-mode-hook 'lsp)
 (add-hook 'guile-mode-hook 'geiser-guile)
@@ -349,3 +352,5 @@
 (defalias 'yes-or-no-p 'y-or-n-p)
 
 (setq geiser-debug-jump-to-debug-p nil)
+(put 'dired-find-alternate-file 'disabled nil)
+(define-key dired-mode-map (kbd "<mouse-2>") 'dired-find-alternate-file)
