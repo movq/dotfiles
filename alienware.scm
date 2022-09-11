@@ -153,6 +153,10 @@ in @var{config}, are available.  The result should be used in place of
                 (bluetooth-service #:auto-enable? #t)
                 (udev-rules-service 'u2f libu2f-host #:groups '("plugdev"))
                 (udev-rules-service 'nvidia nvidia-driver)
+				(udev-rules-service 'uinput (udev-rule
+				  "90-moltengamepad.rules"
+				  (string-append "KERNEL==\"uinput\", MODE=\"0660\", GROUP:=\"mike\", OPTIONS+=\"static_node=uinput\"\n"
+								 "SUBSYSTEM==\"input\", ACTION==\"add\", ENV{ID_INPUT_JOYSTICK}==\"?*\", OWNER:=\"mike\", MODE:=\"0660\"\n")))
                 (accountsservice-service)
         (extra-special-file
           "/usr/bin/startx"
