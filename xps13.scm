@@ -7,21 +7,21 @@
              (srfi srfi-1))
 
 (use-service-modules dbus desktop networking security-token ssh)
-(use-package-modules certs package-management security-token ssh)
+(use-package-modules certs linux package-management security-token ssh)
 
 (define kernel-channels
   (list (channel
          (name 'guix)
          (url "https://github.com/movq/guix.git")
-         (commit "2341b13962303ec9b6971901410948a8e299e180"))
+         (commit "a222f189535decf9f6afdef6061ad6c45a1e3cab"))
         (channel
          (name 'nonguix)
          (url "https://github.com/movq/nonguix.git")
-         (commit "da7072a222e62cdfaee819e17988d9ad3e8bf4d7"))
+         (commit "270ab4b27a0365fb225f2d65c071afd48e01d696"))
         (channel
          (name 'movq-guix)
          (url "https://git.sr.ht/~movq/movq-guix")
-         (commit "68b64a7af62d97bf63b1ec5d176f5238a3e30b73"))))
+         (commit "0e6ebc781f317774113e0230e3f43eda865a27f8"))))
 
 (define kernel-inferior
   (inferior-for-channels kernel-channels))
@@ -92,17 +92,21 @@
 
   (packages (append (list nss-certs) %base-packages))
 
-
   (services 
    (let ((my-services (modify-services %base-services
                         (guix-service-type config =>
                                            (guix-configuration
                                             (inherit config)
                                             (substitute-urls
-                                             (list "http://ulmo.vala.xyz:8080"))
+                                             (list "https://ci.vala.xyz"
+                                                   "https://bordeaux.guix.gnu.org"
+                                                   "https://ci.guix.gnu.org"
+                                                   ))
                                             (authorized-keys
                                              (list
-                                               (plain-file "ulmo" "(public-key(ecc(curve Ed25519)(q #39B5DF8F64652327ABB31D8939A186CA63FA707A881BD18253D85FE9345ED896#)))"))))))))
+                                               (plain-file "berlin.pub" "(public-key(ecc(curve Ed25519)(q #8D156F295D24B0D9A86FA5741A840FF2D24F60F7B6C4134814AD55625971B394#)))")
+                                               (plain-file "bordeaux.pub" "(public-key(ecc(curve Ed25519)(q #7D602902D3A2DBB83F8A0FB98602A754C5493B0B778C8D1DD4E0F41DE14DE34F#)))")
+                                               (plain-file "movq.pub" "(public-key(ecc(curve Ed25519)(q #39B5DF8F64652327ABB31D8939A186CA63FA707A881BD18253D85FE9345ED896#)))"))))))))
      (append (list
               polkit-wheel-service
               fontconfig-file-system-service
@@ -129,5 +133,8 @@
               (bluetooth-service #:auto-enable? #t)
               (udev-rules-service 'u2f libu2f-host #:groups '("plugdev"))
 
+              ;; useless until core-updates is merged :(
+              (simple-service 'swaylock-pam pam-root-service-type
+                (list (unix-pam-service "swaylock")))
               )
              my-services))))
