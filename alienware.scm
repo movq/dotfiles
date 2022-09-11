@@ -4,7 +4,6 @@
              (guix transformations)
              (movq packages linux)
              (movq packages nvidia)
-             (movq system mapped-devices)
              (nongnu packages linux)
              (srfi srfi-1))
 
@@ -58,12 +57,13 @@ in @var{config}, are available.  The result should be used in place of
   (program-file "startx" exp))
 
 (operating-system
-  (kernel linux)
+  (kernel linux-alienware)
   (kernel-arguments
     (append %default-kernel-arguments 
             (list "modprobe.blacklist=nouveau"
                   "nomodeset"
-                  "loglevel=3")))
+                  "loglevel=4"
+				  "net.ifnames=0")))
   (firmware (list linux-firmware))
   (kernel-loadable-modules (list nvidia-driver))
   (host-name "mike-alienware")
@@ -81,7 +81,7 @@ in @var{config}, are available.  The result should be used in place of
       (mapped-device
         (source (uuid "474fb1d5-dac8-433a-af30-bde6468e791d"))
         (target "luks-474fb1d5-dac8-433a-af30-bde6468e791d")
-        (type luks-device-mapping-discard))))
+        (type luks-device-mapping))))
 
   (file-systems (append
                   (list (file-system
@@ -128,14 +128,14 @@ in @var{config}, are available.  The result should be used in place of
                             (guix-configuration
                               (inherit config)
                               (substitute-urls
-                                (list "https://ci.guix.gnu.org"
+                                (list "https://ci.vala.xyz" 
                                       "https://bordeaux.guix.gnu.org"
-                                      "https://substitutes.nonguix.org"))
+                                      "https://ci.guix.gnu.org"))
                               (authorized-keys
-                                (list (file-append guix "/share/guix/berlin.guix.gnu.org.pub")
-                                      (file-append guix "/share/guix/bordeaux.guix.gnu.org.pub")
-                                      (plain-file "inspiron.pub" "(public-key(ecc(curve Ed25519)(q #3D538437832F3FFC9A9B44E928021978B0C2D1A16F4C1272284FB2851BA80F5F#)))")
-                                      (plain-file "nonguix.pub" "(public-key(ecc(curve Ed25519)(q #C1FD53E5D4CE971933EC50C9F307AE2171A2D3B52C804642A7A35F84F3A4EA98#)))"))))))))
+                                (list
+                                   (plain-file "berlin.pub" "(public-key(ecc(curve Ed25519)(q #8D156F295D24B0D9A86FA5741A840FF2D24F60F7B6C4134814AD55625971B394#)))")
+                                   (plain-file "bordeaux.pub" "(public-key(ecc(curve Ed25519)(q #7D602902D3A2DBB83F8A0FB98602A754C5493B0B778C8D1DD4E0F41DE14DE34F#)))")
+                                   (plain-file "movq.pub" "(public-key(ecc(curve Ed25519)(q #39B5DF8F64652327ABB31D8939A186CA63FA707A881BD18253D85FE9345ED896#)))"))))))))
       (append (list
                 fontconfig-file-system-service
                 (service network-manager-service-type)
