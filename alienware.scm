@@ -7,7 +7,7 @@
              (nongnu packages linux)
              (srfi srfi-1))
 
-(use-service-modules dbus desktop networking security-token ssh xorg)
+(use-service-modules dbus desktop networking linux security-token ssh xorg)
 (use-package-modules certs package-management security-token ssh xorg)
 
 (define evil
@@ -60,10 +60,9 @@ in @var{config}, are available.  The result should be used in place of
   (kernel linux-alienware)
   (kernel-arguments
     (append %default-kernel-arguments 
-            (list "modprobe.blacklist=nouveau"
-                  "nomodeset"
-                  "loglevel=4"
-				  "net.ifnames=0")))
+            (list "loglevel=4"
+				  "net.ifnames=0"
+				  "nvidia_drm.modeset=1")))
   (firmware (list linux-firmware))
   (kernel-loadable-modules (list nvidia-driver))
   (host-name "mike-alienware")
@@ -137,6 +136,8 @@ in @var{config}, are available.  The result should be used in place of
                                    (plain-file "bordeaux.pub" "(public-key(ecc(curve Ed25519)(q #7D602902D3A2DBB83F8A0FB98602A754C5493B0B778C8D1DD4E0F41DE14DE34F#)))")
                                    (plain-file "movq.pub" "(public-key(ecc(curve Ed25519)(q #39B5DF8F64652327ABB31D8939A186CA63FA707A881BD18253D85FE9345ED896#)))"))))))))
       (append (list
+				(service kernel-module-loader-service-type
+						 '("nvidia" "nvidia_modeset" "nvidia_uvm" "nvidia_drm"))
                 fontconfig-file-system-service
                 (service network-manager-service-type)
                 (service wpa-supplicant-service-type)
@@ -157,6 +158,9 @@ in @var{config}, are available.  The result should be used in place of
 				  "90-moltengamepad.rules"
 				  (string-append "KERNEL==\"uinput\", MODE=\"0660\", GROUP:=\"mike\", OPTIONS+=\"static_node=uinput\"\n"
 								 "SUBSYSTEM==\"input\", ACTION==\"add\", ENV{ID_INPUT_JOYSTICK}==\"?*\", OWNER:=\"mike\", MODE:=\"0660\"\n")))
+				(pam-limits-service
+				  (list
+					(pam-limits-entry "*" 'both 'nofile 524288)))
                 (accountsservice-service)
         (extra-special-file
           "/usr/bin/startx"
