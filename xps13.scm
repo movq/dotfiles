@@ -6,28 +6,29 @@
              (nongnu packages linux)
              (srfi srfi-1))
 
-(use-service-modules dbus desktop networking security-token ssh)
-(use-package-modules certs linux package-management security-token ssh)
+(use-service-modules dbus desktop networking security-token ssh sysctl xorg)
+(use-package-modules certs gnome linux package-management security-token ssh firmware)
 
 (define kernel-channels
   (list (channel
          (name 'guix)
          (url "https://github.com/movq/guix.git")
-         (commit "a222f189535decf9f6afdef6061ad6c45a1e3cab"))
+         (commit "d51b264b542936c7e82ee0d93f05ad8df23d2fd2"))
         (channel
          (name 'nonguix)
          (url "https://github.com/movq/nonguix.git")
-         (commit "270ab4b27a0365fb225f2d65c071afd48e01d696"))
+         (commit "f41f0c04113b270162501e24bd79e3641d48324b"))
         (channel
          (name 'movq-guix)
          (url "https://git.sr.ht/~movq/movq-guix")
-         (commit "0e6ebc781f317774113e0230e3f43eda865a27f8"))))
+         (commit "c243b27dff073a373e33a01666b3a8970529d9d6"))))
 
 (define kernel-inferior
   (inferior-for-channels kernel-channels))
 
 (operating-system
-  (kernel (first (lookup-inferior-packages kernel-inferior "linux-movq-xps13")))
+  ;(kernel (first (lookup-inferior-packages kernel-inferior "linux-movq-xps13")))
+  (kernel linux-movq-xps13)
   (kernel-arguments (append (list "mem_sleep_default=deep"
                                   "pci=noaer"
                                   "mitigations=off")
@@ -106,8 +107,18 @@
                                              (list
                                                (plain-file "berlin.pub" "(public-key(ecc(curve Ed25519)(q #8D156F295D24B0D9A86FA5741A840FF2D24F60F7B6C4134814AD55625971B394#)))")
                                                (plain-file "bordeaux.pub" "(public-key(ecc(curve Ed25519)(q #7D602902D3A2DBB83F8A0FB98602A754C5493B0B778C8D1DD4E0F41DE14DE34F#)))")
-                                               (plain-file "movq.pub" "(public-key(ecc(curve Ed25519)(q #39B5DF8F64652327ABB31D8939A186CA63FA707A881BD18253D85FE9345ED896#)))"))))))))
+                                               (plain-file "movq.pub" "(public-key(ecc(curve Ed25519)(q #39B5DF8F64652327ABB31D8939A186CA63FA707A881BD18253D85FE9345ED896#)))")))))
+                        (sysctl-service-type config =>
+                                             (sysctl-configuration
+                                               (settings (append '(("kernel.sysrq" . "1")
+                                                                   ("kernel.dmesg_restrict" . "0"))
+                                                                 %default-sysctl-settings)))))))
      (append (list
+              ;(service gnome-desktop-service-type)
+              ;(set-xorg-configuration
+              ;  (xorg-configuration
+              ;    (keyboard-layout keyboard-layout)))
+
               polkit-wheel-service
               fontconfig-file-system-service
               (service network-manager-service-type)
@@ -124,7 +135,8 @@
               (service polkit-service-type)
               (elogind-service #:config
                                (elogind-configuration
-                                (handle-lid-switch-external-power 'suspend)))
+                                (handle-lid-switch-external-power 'suspend)
+                                (kill-user-processes? #t)))
               (dbus-service)
 
               x11-socket-directory-service
@@ -135,6 +147,10 @@
 
               ;; useless until core-updates is merged :(
               (simple-service 'swaylock-pam pam-root-service-type
-                (list (unix-pam-service "swaylock")))
-              )
+                (list (unix-pam-service "swaylock"))))
+             ;(service gdm-service-type)
+               ;(simple-service 'network-manager-applet
+                ;               profile-service-type
+                 ;              (list network-manager-applet))
+               ;(accountsservice-service)
              my-services))))
