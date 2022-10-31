@@ -50,7 +50,7 @@ vim.opt.signcolumn = "yes"
 vim.opt.termguicolors = true
 vim.opt.tabstop = 4
 vim.opt.shiftwidth = 4
-vim.opt.expandtab = false
+vim.opt.expandtab = true
 vim.opt.wildmode = "longest,list,full"
 vim.opt.wildmenu = true
 vim.opt.completeopt = "menu,menuone,noselect"
@@ -124,16 +124,17 @@ require("nvim-treesitter.configs").setup({
 	ensure_installed = {
 		"c",
 		"cpp",
-		"rust",
 		"cuda",
 		"go",
+		"haskell",
 		"javascript",
 		"lua",
+		"ocaml",
 		"python",
+		"rust",
 		"typescript",
 		"vim",
 		"yaml",
-		"haskell",
 	},
 	highlight = {
 		enable = true,
@@ -173,7 +174,7 @@ local on_attach = function(client, bufnr)
 	buf_set_keymap("n", "<space>fr", "<cmd>lua vim.lsp.buf.range_formatting()<CR>", opts)
 end
 
-local capabilities = require("cmp_nvim_lsp").update_capabilities(vim.lsp.protocol.make_client_capabilities())
+local capabilities = require("cmp_nvim_lsp").default_capabilities()
 
 require("clangd_extensions").setup({
 	server = {
@@ -225,6 +226,10 @@ nvim_lsp["gopls"].setup({
 	capabilities = capabilities,
 })
 
+nvim_lsp["hls"].setup({
+	on_attach = on_attach,
+	capabilities = capabilities,
+})
 -- Lua LSP stuff
 local runtime_path = vim.split(package.path, ";")
 table.insert(runtime_path, "lua/?.lua")
