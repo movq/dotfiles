@@ -100,8 +100,6 @@
                                             (inherit config)
                                             (substitute-urls
                                              (list "https://ci.vala.xyz"
-                                                   "https://bordeaux.guix.gnu.org"
-                                                   "https://ci.guix.gnu.org"
                                                    ))
                                             (authorized-keys
                                              (list
@@ -114,11 +112,6 @@
                                                                    ("kernel.dmesg_restrict" . "0"))
                                                                  %default-sysctl-settings)))))))
      (append (list
-              ;(service gnome-desktop-service-type)
-              ;(set-xorg-configuration
-              ;  (xorg-configuration
-              ;    (keyboard-layout keyboard-layout)))
-
               polkit-wheel-service
               fontconfig-file-system-service
               (service network-manager-service-type)
@@ -128,10 +121,6 @@
                         (openssh openssh-sans-x)))
 
               (udisks-service)
-              (service upower-service-type)
-              (accountsservice-service)
-              (service colord-service-type)
-              (geoclue-service)
               (service polkit-service-type)
               (elogind-service #:config
                                (elogind-configuration
@@ -148,9 +137,4 @@
               ;; useless until core-updates is merged :(
               (simple-service 'swaylock-pam pam-root-service-type
                 (list (unix-pam-service "swaylock"))))
-             ;(service gdm-service-type)
-               ;(simple-service 'network-manager-applet
-                ;               profile-service-type
-                 ;              (list network-manager-applet))
-               ;(accountsservice-service)
              my-services))))
