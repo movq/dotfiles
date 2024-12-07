@@ -20,7 +20,7 @@ set $ws17  "17"
 set $ws18  "18"
 set $ws19  "19"
 
-font pango:Noto Sans Bold 12
+font pango:Noto Sans 11
 
 # Invisible workspace
 set $ws20 " "
@@ -31,7 +31,7 @@ floating_modifier $mod
 hide_edge_borders smart
 
 # start a terminal
-bindsym $mod+Return exec alacritty &
+bindsym $mod+Return exec footclient fish &
 
 # start a web browser
 bindsym $mod+Shift+Return exec firefox &
@@ -40,8 +40,7 @@ bindsym $mod+Shift+Return exec firefox &
 bindsym $mod+Shift+apostrophe kill
 
 # rofi app and window launchers
-bindsym $mod+e exec wofi --show drun
-bindsym $mod+Shift+e exec wofi --show run
+bindsym $mod+e exec fuzzel -b 000000ff -t ccccccff -s aaaaaaff -S 000000ff -F "filename,name,generic,exec"
 
 # change focus
 bindsym $mod+h focus left
@@ -84,11 +83,6 @@ bindsym $mod+u fullscreen toggle
 bindsym $mod+o layout stacking
 bindsym $mod+comma layout tabbed
 bindsym $mod+period layout toggle split
-
-
-# change gaps interactively
-bindsym $mod+minus gaps inner current minus 6
-bindsym $mod+plus gaps inner current plus 6
 
 # show/hide keybindings
 bindsym $mod+Shift+question exec /usr/bin/conky-toggle.sh
@@ -162,9 +156,9 @@ bindsym $mod+Shift+period exit
 bindsym $mod+Escape exec swaylock -f
 
 # put the system to sleep
-bindsym $mod+Shift+o exec systemctl suspend
+bindsym $mod+Shift+o exec swaylock && doas rfkill block bluetooth wifi && doas ZZZ
 
-bindsym $mod+j exec thunar
+bindsym $mod+j exec pcmanfm
 
 bindsym $mod+apostrophe exec makoctl dismiss -a
 
@@ -185,7 +179,12 @@ mode "resize" {
 
 bindsym $mod+r mode "resize"
 
-# Enable popup during fullscreen
+mode "pass-through" {
+    bindsym $mod+y mode "default"
+}
+
+bindsym $mod+y mode "pass-through"
+
 popup_during_fullscreen smart
 
 focus_follows_mouse yes
@@ -200,41 +199,49 @@ bindsym XF86AudioLowerVolume exec pactl set-sink-volume @DEFAULT_SINK@ -2%
 
 bindsym XF86MonBrightnessUp exec brightnessctl set +1%
 bindsym XF86MonBrightnessDown exec brightnessctl set 1%-
+bindsym $mod+F11 exec brightnessctl set 1%-
+bindsym $mod+F12 exec brightnessctl set +1%
 
 bindsym Print exec grim "$HOME/pictures/screenshot-$(date +%Y-%m-%d_%H-%M-%S).png"
 bindsym Shift+Print exec grim -g "$(slurp)" "$HOME/pictures/screenshot-$(date +%Y-%m-%d_%H-%M-%S).png"
 
-for_window [app_id="pcmanfm-qt" title="Mount"] floating enable
-
 input type:keyboard {
     xkb_layout gb
     xkb_variant dvorak
-    xkb_options ctrl:swapcaps
+    xkb_options ctrl:nocaps
 }
 
 input type:touchpad {
     tap enabled
     accel_profile adaptive
-    # pointer_accel 0.25
 }
 
 default_border pixel 2
+titlebar_border_thickness 0
+titlebar_padding 4 1
 
-exec gnome-keyring-daemon --start --components=secrets&
-#exec gnome-keyring-daemon --start --components=ssh&
-exec gnome-keyring-daemon --start --components=pkcs11&
 exec mako &
-exec swayidle -w timeout 600 'swaylock -f' timeout 600 'swaymsg "output * dpms off"' resume 'swaymsg "output * dpms on"' before-sleep 'swaylock -f' &
-exec waybar &
-exec gammastep -l 51.5:-1.87 -t 6500:3000 &
+exec swayidle -w timeout 600 'swaylock -f' timeout 600 'swaymsg "output * power off"' resume 'swaymsg "output * power on"' before-sleep 'swaylock -f' &
+exec wlsunset -l 51.5 -L -1.87 -t 3000 -T 6500 &
 exec xsettingsd &
 exec foot --server &
+exec pipewire &
+exec pipewire-pulse &
+exec wireplumber &
 
-exec systemctl --user import-environment DISPLAY WAYLAND_DISPLAY SWAYSOCK MOZ_DBUS_REMOTE XDG_CURRENT_DESKTOP
-exec hash dbus-update-activation-environment 2>/dev/null && \
-    dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY SWAYSOCK MOZ_DBUS_REMOTE XDG_CURRENT_DESKTOP
+bar {
+    status_command i3status
+    font pango:Noto Sans 10
+    position top
+    separator_symbol "   |   "
+    height 22
+    colors {
+        focused_workspace #000000 #404040 #ffffff
+        inactive_workspace #000000 #000000 #ffffff
+    }
+}
+client.focused #000000 #202020 #ffffff
+client.unfocused #000000 #000000 #ffffff
 
-output "*" bg "$HOME/pictures/wallpapers/AnorLondo1.jpg" fill
-#seat seat0 xcursor_theme Bibata-Original-Classic
-
-client.focused #303030 #505050 #000000
+output eDP-1 scale 1.5
+xwayland enable
