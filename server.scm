@@ -25,17 +25,17 @@
 
   (file-systems (append
                   (list (file-system
-                          (device (uuid "d721283c-7917-4e6a-be15-c2d79c6b1ad9"))
+                          (device (uuid "cd384146-5fe0-4e0b-b5e6-04195ecec2c4"))
                           (mount-point "/")
                           (type "btrfs")
                           (options "subvol=/guix"))
                         (file-system
-                          (device (uuid "d721283c-7917-4e6a-be15-c2d79c6b1ad9"))
+                          (device (uuid "cd384146-5fe0-4e0b-b5e6-04195ecec2c4"))
                           (mount-point "/home")
                           (type "btrfs")
                           (options "subvol=/home"))
                         (file-system
-                          (device (uuid "15f1438c-3ddb-46e0-9297-f8bc0d81be9b"))
+                          (device (uuid "5da45336-4c7c-400c-8844-39d29fd9eb6b"))
                           (mount-point "/boot")
                           (type "ext4")))
                       %base-file-systems))
@@ -79,14 +79,14 @@
                                  (addresses
                                    (list (network-address
                                            (device "eth0")
-                                           (value "65.109.53.160/26"))
+                                           (value "138.201.31.157/26"))
                                          (network-address
                                            (device "eth0")
-                                           (value "2a01:4f9:5a:2b2d::1/64"))))
+                                           (value "2a01:4f8:171:330f::2/64"))))
                                  (routes
                                    (list (network-route
                                            (destination "default")
-                                           (gateway "65.109.53.129"))
+                                           (gateway "138.201.31.129"))
                                          (network-route
                                            (destination "default")
                                            (gateway "fe80::1")

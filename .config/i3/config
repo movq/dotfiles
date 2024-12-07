@@ -186,3 +186,6 @@ exec --no-startup-id feh --bg-fill /home/mike/pictures/blobs-d.png
 exec --no-startup-id pipewire &
 exec --no-startup-id pipewire-pulse &
 exec --no-startup-id wireplumber &
+exec --no-startup-id gpg-agent
+exec --no-startup-id mpd
+exec --no-startup-id python3 -m yams
