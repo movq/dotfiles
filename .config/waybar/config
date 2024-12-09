@@ -16,7 +16,11 @@
     "position": "top",
 
     // If height property would be not present, it'd be calculated dynamically
-    "height": 30,
+    // "height": 30,
+
+    "margin-top": 0,
+    "margin-bottom": 0,
+    "margin": "0 0 0 0",
 
     "modules-left": [
         "sway/workspaces",
@@ -27,7 +31,7 @@
         "clock#time"
     ],
     "modules-right": [
-        "network",
+        //"network",
         "memory",
         "cpu",
         "pulseaudio",
@@ -44,24 +48,24 @@
     "idle_inhibitor": {
         "format": "{icon}",
         "format-icons": {
-            "activated": "",
-            "deactivated": ""
+            "activated": "INHIBIT",
+            "deactivated": "NO-INHIBIT"
         }
     },
 
     "pulseaudio": {
-        "format": "{volume}% {icon}",
-        "format-bluetooth": "{volume}% {icon}",
-        "format-muted": "",
-        "format-icons": {
-            "headphone": "",
-            "hands-free": "",
-            "headset": "",
-            "phone": "",
-            "portable": "",
-            "car": "",
-            "default": ["", ""]
-        },
+        "format": "VOL {volume}%",
+        "format-bluetooth": "VOL {volume}%",
+        "format-muted": "MUTE",
+//        "format-icons": {
+//            "headphone": "",
+//            "hands-free": "",
+//            "headset": "",
+//            "phone": "",
+//            "portable": "",
+//            "car": "",
+//            "default": ["", ""]
+//        },
         "scroll-step": 1,
         "on-click": "pavucontrol"
     },
@@ -73,34 +77,37 @@
             "critical": 15
         },
         // Connected to AC
-        "format": "  {icon}  {capacity}%", // Icon: bolt
+        "format": "BAT {capacity}%", // Icon: bolt
         // Not connected to AC
         "format-discharging": "{icon}  {capacity}%",
-        "format-icons": [
-            "", // Icon: battery-full
-            "", // Icon: battery-three-quarters
-            "", // Icon: battery-half
-            "", // Icon: battery-quarter
-            ""  // Icon: battery-empty
-        ],
+//        "format-icons": [
+//            "", // Icon: battery-full
+//            "", // Icon: battery-three-quarters
+//            "", // Icon: battery-half
+//            "", // Icon: battery-quarter
+//            ""  // Icon: battery-empty
+//        ],
         "tooltip": true
     },
 
-    "clock#time": {
+    "clock#date": {
         "interval": 5,
-        "format": "{:%H:%M}",
+        "format": "{:%a %e %b}",
+        "locale": "C",
         "tooltip": false
     },
 
-    "clock#date": {
-      "interval": 10,
-      "format": "{:%e %b %Y}", // Icon: calendar-alt
-      "tooltip-format": "{:%e %B %Y}"
+
+    "clock#time": {
+        "interval": 1,
+        "format": "{:%H:%M:%S}",
+        "locale": "C",
+        "tooltip": false
     },
 
     "cpu": {
         "interval": 5,
-        "format": " {usage}% ({load})", // Icon: microchip
+        "format": "CPU {usage}%", // Icon: microchip
         "states": {
           "warning": 70,
           "critical": 90
@@ -119,7 +126,7 @@
 
     "memory": {
         "interval": 5,
-        "format": " {}%",
+        "format": "MEM {}%",
         "states": {
             "warning": 70,
             "critical": 90
@@ -128,7 +135,7 @@
 
     "network": {
         "interval": 5,
-        "format-wifi": "  {essid}", // Icon: wifi
+        "format-wifi": "  {ipaddr}", // Icon: wifi
         "format-ethernet": "  {ifname}: {ipaddr}/{cidr}", // Icon: ethernet
         "format-disconnected": "⚠  Disconnected",
         "tooltip-format": "{ifname}: {ipaddr}"
