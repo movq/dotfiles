@@ -1,7 +1,12 @@
 (use-modules (gnu)
+             (gnu system accounts)
+             (gnu system privilege)
              (gnu system setuid)
+             (gnu system shadow)
              (guix channels)
              (guix inferior)
+             (gnu packages admin)
+             (gnu packages bash)
              (movq packages linux)
              (nongnu packages linux)
              (srfi srfi-1))
@@ -85,7 +90,7 @@
   ;(kernel (first (lookup-inferior-packages kernel-inferior "linux-movq-xps13")))
   (kernel linux-movq-fw13)
   ;(kernel linux-6.5)
-  (kernel-arguments (append (list "mitigations=off")
+  (kernel-arguments (append (list "mitigations=off" "amdgpu.dcdebugmask=0x10")
                             %default-kernel-arguments))
   (initrd-modules (list "nvme" "aesni-intel" "dm-crypt" "crc32c-generic" "crc32c-intel" "btrfs"))
   (firmware (list linux-firmware))
@@ -122,26 +127,49 @@
                        (file-system
                          (device (uuid "454A-A115" 'fat))
                          (mount-point "/efi")
-                         (type "vfat")))
+                         (type "vfat"))
+                       (file-system
+                         (device "none")
+                         (mount-point "/run/user")
+                         (type "tmpfs")
+                         (check? #f)
+                         (flags '(no-suid no-dev no-exec))
+                         (options "mode=0755")
+                         (create-mount-point? #t)))
                  %base-file-systems))
 
-  (groups (cons (user-group
-                 (name "mike")
-                 (id 1000))
-                %base-groups))
+  (groups
+    (append
+      (list (user-group
+              (name "mike")
+              (id 1000))
+            (user-group
+              (name "nixbld")
+              (system? #t)))
+      %base-groups))
 
-  (users (cons (user-account
-                (name "mike")
-                (uid 1000)
-                (comment "")
-                (group "mike")
-                (supplementary-groups '("wheel" "audio" "video" "lp" "plugdev" "seat")))
-               %base-user-accounts))
+  (users
+    (append
+      (list (user-account
+              (name "mike")
+              (uid 1000)
+              (comment "")
+              (group "mike")
+              (supplementary-groups '("wheel" "audio" "video" "lp" "plugdev" "seat")))
+            (user-account
+              (name "nixbuilder")
+              (home-directory "/var/empty")
+              (shell (file-append shadow "/sbin/nologin"))
+              (group "nixbld")
+              (supplementary-groups '("nixbld"))
+              (system? #t)))
+      %base-user-accounts))
 
   (sudoers-file (plain-file "sudoers" "root ALL=(ALL) ALL
 %wheel ALL=(ALL) NOPASSWD: ALL"))
 
-  (packages %base-packages)
+  (packages (append %base-packages
+                    (list opendoas)))
 
   (services 
    (let ((my-services (modify-services %base-services
@@ -156,7 +184,9 @@
                                             (authorized-keys
                                              (list
                                                (plain-file "berlin.pub" "(public-key(ecc(curve Ed25519)(q #8D156F295D24B0D9A86FA5741A840FF2D24F60F7B6C4134814AD55625971B394#)))")
-                                               (plain-file "bordeaux.pub" "(public-key(ecc(curve Ed25519)(q #7D602902D3A2DBB83F8A0FB98602A754C5493B0B778C8D1DD4E0F41DE14DE34F#)))")))))
+                                               (plain-file "bordeaux.pub" "(public-key(ecc(curve Ed25519)(q #7D602902D3A2DBB83F8A0FB98602A754C5493B0B778C8D1DD4E0F41DE14DE34F#)))")
+                                               (plain-file "alienware.pub" "(public-key(ecc(curve Ed25519)(q #C1C11891A5AC0C66DF15B76DEA19A37168B3963AD5246D9830B6A45095EF2C9B#)))")))
+                                            (extra-options '("--gc-keep-derivations=yes" "--gc-keep-outputs=yes"))))
                         (sysctl-service-type config =>
                                              (sysctl-configuration
                                                (settings (append '(("kernel.sysrq" . "1")
@@ -184,6 +214,8 @@
     }
 });
 "))))))
+              (simple-service 'doas-config etc-service-type
+                (list `("doas.conf" ,(plain-file "doas.conf" "permit nopass keepenv nolog :wheel\n"))))
               (service seatd-service-type)
               (service dbus-root-service-type)
 
@@ -199,6 +231,23 @@
               ;(simple-service 'swaylock-pam pam-root-service-type
               ;  (list (unix-pam-service "swaylock")))
 
-             (extra-special-file "/usr/share/icons/Adwaita"
-                                 (file-append adwaita-icon-theme "/icons")))
-             my-services))))
+              (extra-special-file "/usr/share/icons/Adwaita"
+                                  (file-append adwaita-icon-theme "/icons"))
+             (service subids-service-type
+               (subids-configuration
+                (add-root? #f)))
+             (simple-service 'mike-subids
+                subids-service-type
+                (subids-extension
+                  (subgids
+                   (list
+                    (subid-range (name "mike"))))
+                  (subuids
+                   (list
+                    (subid-range (name "mike")))))))
+             my-services)))
+  (privileged-programs
+    (append (list (privileged-program
+                    (program (file-append opendoas "/bin/doas"))
+                    (setuid? #t)))
+            %default-privileged-programs)))
