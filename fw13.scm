@@ -116,13 +116,22 @@
                          (device (uuid "2ccc0c18-b649-49ae-bc5c-618de8bbb3d5"))
                          (mount-point "/")
                          (type "btrfs")
+                         (flags '(no-atime))
                          (options "subvol=/guix,compress-force=zstd:3,nodiscard")
                          (dependencies mapped-devices))
                        (file-system
                          (device (uuid "2ccc0c18-b649-49ae-bc5c-618de8bbb3d5"))
                          (mount-point "/home")
                          (type "btrfs")
+                         (flags '(no-atime))
                          (options "subvol=/home,compress-force=zstd:3,nodiscard")
+                         (dependencies mapped-devices))
+                       (file-system
+                         (device (uuid "2ccc0c18-b649-49ae-bc5c-618de8bbb3d5"))
+                         (mount-point "/mnt/rootvol")
+                         (type "btrfs")
+                         (flags '(no-atime))
+                         (options "subvol=/,compress-force=zstd:3,nodiscard")
                          (dependencies mapped-devices))
                        (file-system
                          (device (uuid "454A-A115" 'fat))
@@ -177,15 +186,17 @@
                                            (guix-configuration
                                             (inherit config)
                                             (substitute-urls
-                                             (list "https://ci.guix.gnu.org"
+                                             (list "http://sv1.movq.org:8080"
                                                    "https://bordeaux.guix.gnu.org"
+                                                   "https://ci.guix.gnu.org"
                                                    ))
                                             (authorize-key? #t)
                                             (authorized-keys
                                              (list
                                                (plain-file "berlin.pub" "(public-key(ecc(curve Ed25519)(q #8D156F295D24B0D9A86FA5741A840FF2D24F60F7B6C4134814AD55625971B394#)))")
                                                (plain-file "bordeaux.pub" "(public-key(ecc(curve Ed25519)(q #7D602902D3A2DBB83F8A0FB98602A754C5493B0B778C8D1DD4E0F41DE14DE34F#)))")
-                                               (plain-file "alienware.pub" "(public-key(ecc(curve Ed25519)(q #C1C11891A5AC0C66DF15B76DEA19A37168B3963AD5246D9830B6A45095EF2C9B#)))")))
+                                               (plain-file "alienware.pub" "(public-key(ecc(curve Ed25519)(q #C1C11891A5AC0C66DF15B76DEA19A37168B3963AD5246D9830B6A45095EF2C9B#)))")
+                                               (plain-file "sv1.pub" "(public-key(ecc(curve Ed25519)(q #C764270F086A95B3A873BAE629797C37D64F068A0EBA1C036C3A8E6841C5AB4B#)))")))
                                             (extra-options '("--gc-keep-derivations=yes" "--gc-keep-outputs=yes"))))
                         (sysctl-service-type config =>
                                              (sysctl-configuration
@@ -225,7 +236,7 @@
               (service bluetooth-service-type
                 (bluetooth-configuration (auto-enable? #t)))
               (udev-rules-service 'u2f libu2f-host #:groups '("plugdev"))
-              ;(udev-rules-service 'brightness brightnessctl #:groups '("video"))
+              (udev-rules-service 'brightness brightnessctl)
 
               ;; useless until core-updates is merged :(
               ;(simple-service 'swaylock-pam pam-root-service-type
