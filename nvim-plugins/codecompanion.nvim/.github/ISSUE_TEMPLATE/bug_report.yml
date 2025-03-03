@@ -1,0 +1,221 @@
+name: Bug Report
+description: If you notice an aspect of the plugin isn't working as per the README, raise a bug report
+title: "[Bug]: TITLE DESCRIBING THE ISSUE"
+labels: ["bug"]
+assignees: olimorris
+
+body:
+    - type: markdown
+      attributes:
+        value: |
+          ## Before Reporting
+          Please do the following steps before reporting an issue.
+
+          - Update the plugin to the latest version
+          - Read and follow the steps in the [troubleshooting](https://github.com/olimorris/codecompanion.nvim#toolbox-troubleshooting) section
+
+    - type: markdown
+      attributes:
+        value: |
+          ## Test with a `minimal.lua` file
+          > [!IMPORTANT]
+          > Please do not skip this step. For most users, issues occur because of their Neovim configuration. This step enables me to recreate the issue you're facing.
+
+          - Firstly, use the minimal config below as a template
+          - Save the a `minimal.lua` file and add any additional plugins/configuration you may need:
+
+          ```lua
+          ---@diagnostic disable: missing-fields
+
+          --[[
+          NOTE: Set the config path to enable the copilot adapter to work.
+          It will search the following paths for a token:
+            - "$CODECOMPANION_TOKEN_PATH/github-copilot/hosts.json"
+            - "$CODECOMPANION_TOKEN_PATH/github-copilot/apps.json"
+          --]]
+          vim.env["CODECOMPANION_TOKEN_PATH"] = vim.fn.expand("~/.config")
+
+          vim.env.LAZY_STDPATH = ".repro"
+          load(vim.fn.system("curl -s https://raw.githubusercontent.com/folke/lazy.nvim/main/bootstrap.lua"))()
+
+          -- Your CodeCompanion setup
+          local plugins = {
+            {
+              "olimorris/codecompanion.nvim",
+              dependencies = {
+                { "nvim-treesitter/nvim-treesitter", build = ":TSUpdate" },
+                { "nvim-lua/plenary.nvim" },
+                -- Test with blink.cmp
+                {
+                  "saghen/blink.cmp",
+                  lazy = false,
+                  version = "*",
+                  opts = {
+                    keymap = {
+                      preset = "enter",
+                      ["<S-Tab>"] = { "select_prev", "fallback" },
+                      ["<Tab>"] = { "select_next", "fallback" },
+                    },
+                    sources = {
+                      default = { "lsp", "path", "buffer", "codecompanion" },
+                      cmdline = {}, -- Disable sources for command-line mode
+                    },
+                  },
+                },
+                -- Test with nvim-cmp
+                -- { "hrsh7th/nvim-cmp" },
+              },
+              opts = {
+                --Refer to: https://github.com/olimorris/codecompanion.nvim/blob/main/lua/codecompanion/config.lua
+                strategies = {
+                  --NOTE: Change the adapter as required
+                  chat = { adapter = "copilot" },
+                  inline = { adapter = "copilot" },
+                },
+                opts = {
+                  log_level = "DEBUG",
+                },
+              },
+            },
+          }
+
+          require("lazy.minit").repro({ spec = plugins })
+
+          -- Setup Tree-sitter
+          local ts_status, treesitter = pcall(require, "nvim-treesitter.configs")
+          if ts_status then
+            treesitter.setup({
+              ensure_installed = { "lua", "markdown", "markdown_inline", "yaml" },
+              highlight = { enable = true },
+            })
+          end
+
+          -- Setup nvim-cmp
+          -- local cmp_status, cmp = pcall(require, "cmp")
+          -- if cmp_status then
+          --   cmp.setup({
+          --     mapping = cmp.mapping.preset.insert({
+          --       ["<C-b>"] = cmp.mapping.scroll_docs(-4),
+          --       ["<C-f>"] = cmp.mapping.scroll_docs(4),
+          --       ["<C-Space>"] = cmp.mapping.complete(),
+          --       ["<C-e>"] = cmp.mapping.abort(),
+          --       ["<CR>"] = cmp.mapping.confirm({ select = true }),
+          --       -- Accept currently selected item. Set `select` to `false` to only confirm explicitly selected items.
+          --     }),
+          --   })
+          -- end
+          ```
+
+          - Once you've updated for your config, run Neovim with the minimal config:
+
+          ```sh
+          nvim --clean -u minimal.lua
+          ```
+
+          > [!NOTE]
+          > You may need to do this a couple of times for Treesitter to fully download and sync
+
+          - Confirm you can recreate the issue with the minimal config
+
+    - type: markdown
+      attributes:
+        value: |
+          ## Outputs
+
+    - type: textarea
+      id: codecompanion-config
+      attributes:
+        label: Your `minimal.lua` config
+        description: Please paste the minimal.lua file you've created here. Please ensure you're able to recreate the issue with this file
+        placeholder: |
+          ```lua
+          -- Your minimal.lua config here
+          ```
+      validations:
+        required: true
+
+    - type: textarea
+      id: errors
+      attributes:
+        label: Error messages
+        description: Please paste any error messages you receive
+        placeholder: |
+          ```lua
+          -- Error messages here
+          ```
+      validations:
+        required: false
+
+    - type: textarea
+      id: logs
+      attributes:
+        label: Log output
+        description: Please paste the relevant output from the log located in `.repro/state/nvim/codecompanion/codecompanion.log`. **Please ensure you don't send over any credentials or API keys**
+        placeholder: |
+          ```txt
+          -- Paste log here
+          ```
+      validations:
+        required: true
+
+    - type: textarea
+      id: health
+      attributes:
+        label: Health check output
+        description: Please paste the output from `:checkhealth codecompanion`
+        placeholder: |
+          ```txt
+          -- Paste health check here
+          ```
+      validations:
+        required: false
+
+    - type: textarea
+      id: bug
+      attributes:
+        label: Describe the bug
+        description: Please describe the bug and include any screenshots/screencasts
+        placeholder: |
+          What I expect to happen:
+
+          What actually happens:
+
+      validations:
+        required: true
+
+    - type: textarea
+      id: reproduce
+      attributes:
+        label: Reproduce the bug
+        description: Please include the steps so I can try and reproduce the bug
+        placeholder: |
+          Steps to reproduce:
+          1.
+          2.
+          3.
+      validations:
+        required: false
+
+    - type: input
+      id: adapter
+      attributes:
+        label: Adapter and model
+        description: Please share the adapter and model you used
+        placeholder: |
+          Anthropic and claude-3.5-sonnet
+      validations:
+        required: true
+
+    - type: checkboxes
+      id: final-checks
+      attributes:
+        label: Final checks
+        description: |
+          Before you submit, please make sure you have completed the following steps:
+        options:
+          - label: I have made sure this issue exists in the latest version of the plugin
+            required: true
+          - label: I have tested with the `minimal.lua` file from above and have shared this
+            required: true
+          - label: I have shared the contents of the log file
+            required: true

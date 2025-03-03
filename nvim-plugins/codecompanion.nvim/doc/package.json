@@ -1,0 +1,12 @@
+{
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "vitepress": "^1.5.0"
+  },
+  "scripts": {
+    "dev": "vitepress dev",
+    "build": "vitepress build",
+    "build:release": "NODE_ENV=production vitepress build",
+    "preview": "vitepress preview"
+  }
+}
