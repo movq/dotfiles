@@ -6,6 +6,7 @@
              (guix channels)
              (guix inferior)
              (gnu packages admin)
+             (gnu packages android)
              (gnu packages bash)
              (movq packages linux)
              (nongnu packages linux)
@@ -14,83 +15,10 @@
 (use-service-modules dbus desktop networking security-token shepherd ssh sysctl xorg)
 (use-package-modules certs gnome linux package-management security-token ssh firmware)
 
-;(define %my-elogind-file-systems
-;  ;; We don't use systemd, but these file systems are needed for elogind,
-;  ;; which was extracted from systemd.
-;  (append
-;   (list (file-system
-;           (device "none")
-;           (mount-point "/run/systemd")
-;           (type "tmpfs")
-;           (check? #f)
-;           (flags '(no-suid no-dev no-exec))
-;           (options "mode=0755")
-;           (create-mount-point? #t))
-;         (file-system
-;           (device "none")
-;           (mount-point "/run/user")
-;           (type "tmpfs")
-;           (check? #f)
-;           (flags '(no-suid no-dev no-exec))
-;           (options "mode=0755")
-;           (create-mount-point? #t))
-;         ;; Elogind uses cgroups to organize processes, allowing it to map PIDs
-;         ;; to sessions.  Elogind's cgroup hierarchy isn't associated with any
-;         ;; resource controller ("subsystem").
-;         (file-system
-;           (device "none")
-;           (mount-point "/sys/fs/cgroup")
-;           (type "cgroup2")
-;           (check? #f)
-;           (create-mount-point? #t)))))
-;
-;(define my-elogind-service-type
-;  (service-type (name 'elogind)
-;                (extensions
-;                 (list (service-extension dbus-root-service-type
-;                                          (@@ (gnu services desktop) elogind-dbus-service))
-;                       (service-extension udev-service-type
-;                                          (compose list (@@ (gnu services desktop) elogind-package)))
-;                       (service-extension polkit-service-type
-;                                          (compose list (@@ (gnu services desktop) elogind-package)))
-;
-;                       ;; Start elogind from the Shepherd rather than waiting
-;                       ;; for bus activation.  This ensures that it can handle
-;                       ;; events like lid close, etc.
-;                       (service-extension shepherd-root-service-type
-;                                          (@@ (gnu services desktop) elogind-shepherd-service))
-;
-;                       ;; Provide the 'loginctl' command.
-;                       (service-extension profile-service-type
-;                                          (compose list (@@ (gnu services desktop) elogind-package)))
-;
-;                       ;; Extend PAM with pam_elogind.so.
-;                       (service-extension pam-root-service-type
-;                                          (@@ (gnu services desktop) pam-extension-procedure))
-;
-;                       ;; We need /run/user, /run/systemd, etc.
-;                       (service-extension file-system-service-type
-;                                          (const %my-elogind-file-systems))))
-;                (default-value (elogind-configuration))
-;                (description "Run the @command{elogind} login and seat
-;management service.  The @command{elogind} service integrates with PAM to
-;allow other system components to know the set of logged-in users as well as
-;their session types (graphical, console, remote, etc.).  It can also clean up
-;after users when they log out.")))
-;
-;(define* (my-elogind-service #:key (config (elogind-configuration)))
-;  "Return a service that runs the @command{elogind} login and seat management
-;service.  The @command{elogind} service integrates with PAM to allow other
-;system components to know the set of logged-in users as well as their session
-;types (graphical, console, remote, etc.).  It can also clean up after users
-;when they log out."
-;  (service my-elogind-service-type config))
-
 (operating-system
   ;(kernel (first (lookup-inferior-packages kernel-inferior "linux-movq-xps13")))
   (kernel linux-movq-fw13)
-  ;(kernel linux-6.5)
-  (kernel-arguments (append (list "mitigations=off" "amdgpu.dcdebugmask=0x10")
+  (kernel-arguments (append (list "mitigations=off" "amdgpu.dcdebugmask=0x10" "resume=/dev/mapper/nvme0n1p2-crypt" "resume_offset=13378816")
                             %default-kernel-arguments))
   (initrd-modules (list "nvme" "aesni-intel" "dm-crypt" "crc32c-generic" "crc32c-intel" "btrfs"))
   (firmware (list linux-firmware))
@@ -144,8 +72,20 @@
                          (check? #f)
                          (flags '(no-suid no-dev no-exec))
                          (options "mode=0755")
-                         (create-mount-point? #t)))
+                         (create-mount-point? #t))
+                       (file-system
+                         (device "none")
+                         (mount-point "/home/mike/.cache/thumbnails")
+                         (type "tmpfs")
+                         (check? #f)
+                         (options "uid=1000,gid=1000,mode=0755")))
                  %base-file-systems))
+  (swap-devices
+  (list
+    (swap-space
+      (target "/mnt/rootvol/swap/swapfile")
+      (dependencies (filter (file-system-mount-point-predicate "/mnt/rootvol")
+                            file-systems)))))
 
   (groups
     (append
@@ -164,7 +104,7 @@
               (uid 1000)
               (comment "")
               (group "mike")
-              (supplementary-groups '("wheel" "audio" "video" "lp" "plugdev" "seat")))
+              (supplementary-groups '("wheel" "audio" "video" "lp" "plugdev" "seat" "adbusers")))
             (user-account
               (name "nixbuilder")
               (home-directory "/var/empty")
@@ -202,7 +142,38 @@
                                              (sysctl-configuration
                                                (settings (append '(("kernel.sysrq" . "1")
                                                                    ("kernel.dmesg_restrict" . "0"))
-                                                                 %default-sysctl-settings)))))))
+                                                                 %default-sysctl-settings))))
+                        (syslog-service-type config =>
+                                             (syslog-configuration
+                                               (config-file (plain-file "syslog.conf" "\
+# See info '(inetutils) syslogd invocation' for the documentation
+# of the syslogd configuration syntax.
+
+# Log all error messages, authentication messages of
+# level notice or higher and anything of level err or
+# higher to the console.
+# Don't log private authentication messages!
+# *.alert;auth.notice;authpriv.none      -/dev/console
+
+# Log anything (except mail) of level info or higher.
+# Don't log private authentication messages!
+# *.info;mail.none;authpriv.none         -/var/log/messages
+
+# Log \"debug\"-level entries and nothing else.
+# *.=debug                               -/var/log/debug
+
+# Same, in a different place.
+# *.info;mail.none;authpriv.none         -/dev/tty12
+
+# The authpriv file has restricted access.
+# 'fsync' the file after each line (hence the lack of a leading dash).
+# Also include unprivileged auth logs of info or higher level
+# to conveniently gather the authentication data at the same place.
+# authpriv.*;auth.info                    /var/log/secure
+
+# Log all the mail messages in one place.
+mail.*                                 -/var/log/maillog
+")))))))
      (append (list
               polkit-wheel-service
               fontconfig-file-system-service
@@ -212,9 +183,7 @@
                        (openssh-configuration
                         (openssh openssh-sans-x)))
 
-              (service udisks-service-type)
               (service polkit-service-type)
-
               (simple-service 'polkit-wheel-all polkit-service-type
                 (list (file-union "polkit-wheel-all"
                                   `(("share/polkit-1/rules.d/00-wheel-all.rules"
@@ -237,13 +206,8 @@
                 (bluetooth-configuration (auto-enable? #t)))
               (udev-rules-service 'u2f libu2f-host #:groups '("plugdev"))
               (udev-rules-service 'brightness brightnessctl)
+              (udev-rules-service 'android android-udev-rules #:groups '("adbusers"))
 
-              ;; useless until core-updates is merged :(
-              ;(simple-service 'swaylock-pam pam-root-service-type
-              ;  (list (unix-pam-service "swaylock")))
-
-              (extra-special-file "/usr/share/icons/Adwaita"
-                                  (file-append adwaita-icon-theme "/icons"))
              (service subids-service-type
                (subids-configuration
                 (add-root? #f)))
