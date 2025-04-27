@@ -67,6 +67,8 @@ bindsym $mod+Shift+Down move down
 bindsym $mod+Shift+Up move up
 bindsym $mod+Shift+Right move right
 
+bindsym $mod+x move workspace to output next
+
 # split in horizontal orientation
 bindsym $mod+d split h
 
@@ -83,9 +85,6 @@ bindsym $mod+u fullscreen toggle
 bindsym $mod+o layout stacking
 bindsym $mod+comma layout tabbed
 bindsym $mod+period layout toggle split
-
-# show/hide keybindings
-bindsym $mod+Shift+question exec /usr/bin/conky-toggle.sh
 
 # toggle tiling / floating
 bindsym $mod+Shift+u floating toggle
@@ -156,7 +155,8 @@ bindsym $mod+Shift+period exit
 bindsym $mod+Escape exec swaylock -f
 
 # put the system to sleep
-bindsym $mod+Shift+o exec swaylock && doas rfkill block bluetooth wifi && doas ZZZ
+#bindsym $mod+Shift+o exec swaylock && doas rfkill block bluetooth wifi && doas ZZZ
+bindsym $mod+Shift+o exec doas /home/mike/.local/bin/hibernate.sh
 
 bindsym $mod+j exec pcmanfm
 
@@ -221,13 +221,14 @@ titlebar_border_thickness 0
 titlebar_padding 4 1
 
 exec mako &
-exec swayidle -w timeout 600 'swaylock -f' timeout 600 'swaymsg "output * power off"' resume 'swaymsg "output * power on"' before-sleep 'swaylock -f' &
+#exec swayidle -w timeout 600 'swaylock -f' timeout 600 'swaymsg "output * power off"' resume 'swaymsg "output * power on"' before-sleep 'swaylock -f' &
 exec wlsunset -l 51.5 -L -1.87 -t 3000 -T 6500 &
 exec xsettingsd &
 exec foot --server &
-exec pipewire &
-exec pipewire-pulse &
-exec wireplumber &
+#exec pipewire
+#exec pipewire-pulse
+#exec sleep 1 && wireplumber
+exec dbus-update-activation-environment DISPLAY WAYLAND_DISPLAY SWAYSOCK XDG_CURRENT_DESKTOP
 
 bar {
     status_command i3status
@@ -244,4 +245,8 @@ client.focused #000000 #202020 #ffffff
 client.unfocused #000000 #000000 #ffffff
 
 output eDP-1 scale 1.5
+
+
+for_window [all] allow_tearing yes
+
 xwayland enable
