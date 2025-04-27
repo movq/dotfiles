@@ -25,6 +25,7 @@
   (host-name "mike-framework")
   (timezone "Europe/London")
   (locale "en_GB.utf8")
+  (locale-libcs (list glibc))
   (keyboard-layout (keyboard-layout "gb" "dvorak" #:options (list "ctrl:swapcaps")))
 
   (bootloader (bootloader-configuration
@@ -104,7 +105,7 @@
               (uid 1000)
               (comment "")
               (group "mike")
-              (supplementary-groups '("wheel" "audio" "video" "lp" "plugdev" "seat" "adbusers")))
+              (supplementary-groups '("wheel" "audio" "video" "input" "lp" "plugdev" "seat" "adbusers")))
             (user-account
               (name "nixbuilder")
               (home-directory "/var/empty")
@@ -143,38 +144,18 @@
                                                (settings (append '(("kernel.sysrq" . "1")
                                                                    ("kernel.dmesg_restrict" . "0"))
                                                                  %default-sysctl-settings))))
-                        (syslog-service-type config =>
-                                             (syslog-configuration
-                                               (config-file (plain-file "syslog.conf" "\
-# See info '(inetutils) syslogd invocation' for the documentation
-# of the syslogd configuration syntax.
-
-# Log all error messages, authentication messages of
-# level notice or higher and anything of level err or
-# higher to the console.
-# Don't log private authentication messages!
-# *.alert;auth.notice;authpriv.none      -/dev/console
-
-# Log anything (except mail) of level info or higher.
-# Don't log private authentication messages!
-# *.info;mail.none;authpriv.none         -/var/log/messages
-
-# Log \"debug\"-level entries and nothing else.
-# *.=debug                               -/var/log/debug
-
-# Same, in a different place.
-# *.info;mail.none;authpriv.none         -/dev/tty12
-
-# The authpriv file has restricted access.
-# 'fsync' the file after each line (hence the lack of a leading dash).
-# Also include unprivileged auth logs of info or higher level
-# to conveniently gather the authentication data at the same place.
-# authpriv.*;auth.info                    /var/log/secure
-
-# Log all the mail messages in one place.
-mail.*                                 -/var/log/maillog
-")))))))
+                        (shepherd-system-log-service-type config =>
+                                             (system-log-configuration
+                                               (inherit config)
+                                               (message-destination
+                                                 #~(lambda _
+                                                     '())))))))
      (append (list
+              (extra-special-file "/etc/alsa/conf.d/50-pipewire.conf"
+                (file-append pipewire "/share/alsa/alsa.conf.d/50-pipewire.conf"))
+              (extra-special-file "/etc/alsa/conf.d/99-pipewire-default.conf"
+                (file-append pipewire "/share/alsa/alsa.conf.d/99-pipewire-default.conf"))
+
               polkit-wheel-service
               fontconfig-file-system-service
               (service network-manager-service-type)
