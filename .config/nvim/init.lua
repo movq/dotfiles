@@ -136,9 +136,9 @@ require("neo-tree").setup({
       mappings = {
         ["<C-a>"] = "close_window",
         ["<C-e>"] = "close_window",
-        ["<space>"] = {
-            "toggle_node",
-            nowait = false, -- disable `nowait` if you have existing combos starting with this char that you want to use
+        ["<space>"] = { 
+            "toggle_node", 
+            nowait = false, -- disable `nowait` if you have existing combos starting with this char that you want to use 
         },
         ["<2-LeftMouse>"] = "open",
         ["<cr>"] = "open",
@@ -159,7 +159,7 @@ require("neo-tree").setup({
         -- ['C'] = 'close_all_subnodes',
         ["z"] = "close_all_nodes",
         --["Z"] = "expand_all_nodes",
-        ["a"] = {
+        ["a"] = { 
           "add",
           -- this command supports BASH style brace expansion ("x{a,b,c}" -> xa,xb,xc). see `:h neo-tree-file-actions` for details
           -- some commands may take optional config options, see `:h neo-tree-mappings` for details
@@ -271,6 +271,18 @@ nvim_lsp["clangd"].setup({
 	},
 })
 
+nvim_lsp["gopls"].setup({
+	capabilities = capabilities,
+})
+
+nvim_lsp["hls"].setup({
+	capabilities = capabilities,
+})
+
+nvim_lsp["nil_ls"].setup({
+    capabilities = capabilities,
+})
+
 nvim_lsp["pyright"].setup({
 	before_init = function(params)
 		params.processId = vim.NIL
@@ -291,7 +303,6 @@ nvim_lsp["ts_ls"].setup({
 	cmd = {
 		"typescript-language-server",
 		"--stdio",
-		"--tsserver-path=/usr/lib/node_modules/typescript-language-server/lib/",
 	},
 	capabilities = capabilities,
 	settings = {
@@ -305,14 +316,6 @@ nvim_lsp["ts_ls"].setup({
 			includeCompletionsForImportStatements = true,
 		},
 	},
-})
-
-nvim_lsp["gopls"].setup({
-	capabilities = capabilities,
-})
-
-nvim_lsp["hls"].setup({
-	capabilities = capabilities,
 })
 
 -- Lua LSP stuff
@@ -541,3 +544,4 @@ require("codecompanion").setup({
         },
     }
 })
+
