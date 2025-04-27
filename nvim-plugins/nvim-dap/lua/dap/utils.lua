@@ -2,7 +2,7 @@ local M = {}
 
 
 ---@param err dap.ErrorResponse
----@return string
+---@return string?
 function M.fmt_error(err)
   local body = err.body or {}
   if body.error and body.error.showUser then
@@ -78,9 +78,9 @@ end
 --- })
 --- </pre>
 ---
----@param opts? {filter: string|(fun(proc: {pid: integer, name: string}): boolean)}
+---@param opts? {filter: string|(fun(proc: dap.utils.Proc): boolean)}
 ---
----@return {pid: integer, name: string}[]
+---@return dap.utils.Proc[]
 function M.get_processes(opts)
   opts = opts or {}
   local is_windows = vim.fn.has('win32') == 1
@@ -142,6 +142,65 @@ function M.get_processes(opts)
 end
 
 
+
+
+--- Trim a process name to better fit into `columns`
+---
+---@param name string
+---@param columns integer
+---@param wordlimit integer
+---@return string
+local function trim_procname(name, columns, wordlimit)
+  if #name <= columns then
+    return name
+  end
+
+  local function trimpart(part, i)
+    if #part <= wordlimit then
+      return part
+    end
+    -- `/usr/bin/cmd` -> `cmd`
+    part = part:gsub("(/?[^/]+/)", "")
+
+    -- preserve command name in full length, but trim arguments if they exceed word limit
+    if i > 1 and #part > wordlimit then
+      return "‥" .. part:sub(#part - wordlimit)
+    end
+    return part
+  end
+
+  -- proc name can include arguments `foo --bar --baz`
+  -- trim each element and drop trailing args if still too long
+  local i = 0
+  local parts = {}
+  local len = 0
+  for word in name:gmatch("[^%s]+") do
+    i = i + 1
+    local trimmed = trimpart(word, i)
+    len = len + #trimmed
+    if i > 1 and len > columns then
+      table.insert(parts, "[‥]")
+      break
+    else
+      table.insert(parts, trimmed)
+    end
+  end
+  return i > 0 and table.concat(parts, " ") or trimpart(name, 1)
+end
+
+---@private
+M._trim_procname = trim_procname
+
+
+---@class dap.utils.Proc
+---@field pid integer
+---@field name string
+
+---@class dap.utils.pick_process.Opts
+---@field filter? string|fun(proc: dap.utils.Proc):boolean
+---@field label? fun(proc: dap.utils.Proc): string
+---@field prompt? string
+
 --- Show a prompt to select a process pid
 --- Requires `ps ah -u $USER` on Linux/Mac and `tasklist /nh /fo csv` on windows.
 --
@@ -153,6 +212,10 @@ end
 ---                      and it must return a boolean.
 ---                      Matches are included.
 ---
+--- - label         fun: A function to generate a custom label for the processes.
+---                      If not provided, a default label is used.
+--- - prompt     string: The title/prompt of pick process select.
+---
 --- <pre>
 --- require("dap.utils").pick_process({ filter = "sway" })
 --- </pre>
@@ -163,17 +226,26 @@ end
 --- })
 --- </pre>
 ---
----@param opts? {filter: string|(fun(proc: {pid: integer, name: string}): boolean)}
+--- <pre>
+--- require("dap.utils").pick_process({
+---   label = function(proc) return string.format("Process: %s (PID: %d)", proc.name, proc.pid) end
+--- })
+--- </pre>
+---
+---@param opts? dap.utils.pick_process.Opts
 function M.pick_process(opts)
   opts = opts or {}
-  local label_fn = function(proc)
-    return string.format("id=%d name=%s", proc.pid, proc.name)
+  local cols = math.max(14, math.floor(vim.o.columns * 0.7))
+  local wordlimit = math.max(10, math.floor(cols / 3))
+  local label_fn = opts.label or function(proc)
+    local name = trim_procname(proc.name, cols, wordlimit)
+    return string.format("id=%d name=%s", proc.pid, name)
   end
   local procs = M.get_processes(opts)
   local co, ismain = coroutine.running()
   local ui = require("dap.ui")
   local pick = (co and not ismain) and ui.pick_one or ui.pick_one_sync
-  local result = pick(procs, "Select process: ", label_fn)
+  local result = pick(procs, opts.prompt or "Select process: ", label_fn)
   return result and result.pid or require("dap").ABORT
 end
 
@@ -305,6 +377,8 @@ end
 --- Split an argument string on whitespace characters into a list,
 --- except if the whitespace is contained within single or double quotes.
 ---
+--- Leading and trailing whitespace is removed.
+---
 --- Examples:
 ---
 --- ```lua
@@ -331,6 +405,10 @@ function M.splitstr(str)
     local quote = P(quotestr)
     local escaped_quote = P('\\') * quote
     return quote * C(((1 - P(quote)) + escaped_quote) ^ 0) * quote
+  end
+  str = str:match("^%s*(.*%S)")
+  if not str or str == "" then
+    return {}
   end
 
   local space = S(" \t\n\r") ^ 1

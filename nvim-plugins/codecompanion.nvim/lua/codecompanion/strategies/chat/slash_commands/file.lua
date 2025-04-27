@@ -48,6 +48,7 @@ local providers = {
       source = "files",
       prompt = snacks.title,
       confirm = snacks:display(),
+      main = { file = false },
     })
   end,
 
@@ -140,7 +141,7 @@ function SlashCommand:execute(SlashCommands)
 end
 
 ---Open and read the contents of the selected file
----@param selected { relative_path: string?, path: string, description: string? }
+---@param selected { path: string, relative_path: string?, description: string? }
 function SlashCommand:read(selected)
   local ok, content = pcall(function()
     return path.new(selected.path):read()
@@ -151,7 +152,7 @@ function SlashCommand:read(selected)
   end
 
   local ft = vim.filetype.match({ filename = selected.path })
-  local relative_path = selected.relative_path or selected[1] or selected.path
+  local relative_path = vim.fn.fnamemodify(selected.path, ":.")
   local id = "<file>" .. relative_path .. "</file>"
 
   return content, ft, id, relative_path

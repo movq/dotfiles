@@ -1,6 +1,4 @@
 --This file should contain all commands meant to be used by mappings.
-
-local vim = vim
 local fs_actions = require("neo-tree.sources.filesystem.lib.fs_actions")
 local utils = require("neo-tree.utils")
 local renderer = require("neo-tree.ui.renderer")
@@ -95,6 +93,9 @@ end
 ---@param callback function The callback to call when the command is done. Called with the parent node as the argument.
 M.add = function(state, callback)
   local node = get_folder_node(state)
+  if not node then
+    return
+  end
   local in_directory = node:get_id()
   local using_root_directory = get_using_root_directory(state)
   fs_actions.create_node(in_directory, callback, using_root_directory)
@@ -105,6 +106,9 @@ end
 ---@param callback function The callback to call when the command is done. Called with the parent node as the argument.
 M.add_directory = function(state, callback)
   local node = get_folder_node(state)
+  if not node then
+    return
+  end
   local in_directory = node:get_id()
   local using_root_directory = get_using_root_directory(state)
   fs_actions.create_directory(in_directory, callback, using_root_directory)
@@ -112,23 +116,31 @@ end
 
 ---Expand all nodes
 ---@param state table The state of the source
----@param node table A node to expand
----@param prefetcher table an object with two methods `prefetch(state, node)` and `should_prefetch(node) => boolean`
+---@param node table? A single node to expand (defaults to all root nodes)
+---@param prefetcher table? an object with two methods `prefetch(state, node)` and `should_prefetch(node) => boolean`
 M.expand_all_nodes = function(state, node, prefetcher)
-  log.debug("Expanding all nodes under " .. node:get_id())
-  if prefetcher == nil then
-    prefetcher = node_expander.default_prefetcher
-  end
+  local root_nodes = node and { node } or state.tree:get_nodes()
 
   renderer.position.set(state, nil)
 
   local task = function()
-    node_expander.expand_directory_recursively(state, node, prefetcher)
+    for _, root in pairs(root_nodes) do
+      log.debug("Expanding all nodes under " .. root:get_id())
+      node_expander.expand_directory_recursively(state, root, prefetcher)
+    end
   end
   async.run(task, function()
     log.debug("All nodes expanded - redrawing")
     renderer.redraw(state)
   end)
+end
+
+---Expand all subnodes
+---@param state table The state of the source
+---@param node table? A single node to expand (defaults to node under the cursor)
+---@param prefetcher table? an object with two methods `prefetch(state, node)` and `should_prefetch(node) => boolean`
+M.expand_all_subnodes = function(state, node, prefetcher)
+  M.expand_all_nodes(state, node or state.tree:get_node(), prefetcher)
 end
 
 M.close_node = function(state, callback)
@@ -150,11 +162,8 @@ M.close_node = function(state, callback)
     target_node:collapse()
     renderer.redraw(state)
     renderer.focus_node(state, target_node:get_id())
-    if
-      state.explicitly_opened_directories
-      and state.explicitly_opened_directories[target_node:get_id()]
-    then
-      state.explicitly_opened_directories[target_node:get_id()] = false
+    if state.explicitly_opened_nodes and state.explicitly_opened_nodes[target_node:get_id()] then
+      state.explicitly_opened_nodes[target_node:get_id()] = false
     end
   end
 end
@@ -174,16 +183,13 @@ M.close_all_subnodes = function(state)
   renderer.collapse_all_nodes(tree, target_node:get_id())
   renderer.redraw(state)
   renderer.focus_node(state, target_node:get_id())
-  if
-    state.explicitly_opened_directories
-    and state.explicitly_opened_directories[target_node:get_id()]
-  then
-    state.explicitly_opened_directories[target_node:get_id()] = false
+  if state.explicitly_opened_nodes and state.explicitly_opened_nodes[target_node:get_id()] then
+    state.explicitly_opened_nodes[target_node:get_id()] = false
   end
 end
 
 M.close_all_nodes = function(state)
-  state.explicitly_opened_directories = {}
+  state.explicitly_opened_nodes = {}
   renderer.collapse_all_nodes(state.tree)
   renderer.redraw(state)
 end
@@ -375,9 +381,13 @@ end
 -- END Git commands
 --------------------------------------------------------------------------------
 
+local get_sources = function()
+  local config = require("neo-tree").config
+  return config.source_selector.sources or config.sources
+end
+
 M.next_source = function(state)
-  local sources = require("neo-tree").config.sources
-  local sources = require("neo-tree").config.source_selector.sources
+  local sources = get_sources()
   local next_source = sources[1]
   for i, source_info in ipairs(sources) do
     if source_info.source == state.name then
@@ -397,8 +407,7 @@ M.next_source = function(state)
 end
 
 M.prev_source = function(state)
-  local sources = require("neo-tree").config.sources
-  local sources = require("neo-tree").config.source_selector.sources
+  local sources = get_sources()
   local next_source = sources[#sources]
   for i, source_info in ipairs(sources) do
     if source_info.source == state.name then
@@ -448,7 +457,16 @@ end
 
 M.order_by_name = function(state)
   set_sort(state, "Name")
-  state.sort_field_provider = nil
+  local config = require("neo-tree").config
+  if config.sort_case_insensitive then
+    state.sort_field_provider = function(node)
+      return node.path:lower()
+    end
+  else
+    state.sort_field_provider = function(node)
+      return node.path
+    end
+  end
   require("neo-tree.sources.manager").refresh(state.name)
 end
 
@@ -512,6 +530,7 @@ M.show_debug_info = function(state)
   print(vim.inspect(state))
 end
 
+local default_filetime_format = "%Y-%m-%d %I:%M %p"
 M.show_file_details = function(state)
   local node = state.tree:get_node()
   if node.type == "message" then
@@ -530,9 +549,11 @@ M.show_file_details = function(state)
     table.insert(left, "Size")
     table.insert(right, utils.human_size(stat.size))
     table.insert(left, "Created")
-    table.insert(right, os.date("%Y-%m-%d %I:%M %p", stat.birthtime.sec))
+    local created_format = state.config.created_format or default_filetime_format
+    table.insert(right, utils.date(created_format, stat.birthtime.sec))
     table.insert(left, "Modified")
-    table.insert(right, os.date("%Y-%m-%d %I:%M %p", stat.mtime.sec))
+    local modified_format = state.config.modified_format or default_filetime_format
+    table.insert(right, utils.date(modified_format, stat.mtime.sec))
   end
 
   local lines = {}
@@ -668,8 +689,14 @@ M.scroll_preview = function(state)
   Preview.scroll(state)
 end
 
-M.focus_preview = function()
-  Preview.focus()
+M.focus_preview = function(state)
+  if Preview.is_active() then
+    Preview.focus()
+  else
+    vim.api.nvim_win_call(state.winid, function()
+      vim.api.nvim_feedkeys(state.fallback, "n", false)
+    end)
+  end
 end
 
 ---Expands or collapses the current node.
@@ -704,7 +731,7 @@ M.toggle_directory = function(state, toggle_directory)
   M.toggle_node(state, toggle_directory)
 end
 
----Open file or directory
+---Open file or expandable node
 ---@param state table The state of the source
 ---@param open_cmd string The vim command to use to open the file
 ---@param toggle_directory function The function to call to toggle a directory
@@ -712,9 +739,6 @@ end
 local open_with_cmd = function(state, open_cmd, toggle_directory, open_file)
   local tree = state.tree
   local success, node = pcall(tree.get_node, tree)
-  if node.type == "message" then
-    return
-  end
   if not (success and node) then
     log.debug("Could not get node.")
     return
@@ -743,13 +767,13 @@ local open_with_cmd = function(state, open_cmd, toggle_directory, open_file)
   end
 
   local config = state.config or {}
-  if node.type ~= "directory" and config.no_expand_file ~= nil then
+  if node.type == "file" and config.no_expand_file ~= nil then
     log.warn("`no_expand_file` options is deprecated, move to `expand_nested_files` (OPPOSITE)")
     config.expand_nested_files = not config.no_expand_file
   end
-  if node.type == "directory" then
-    M.toggle_node(state, toggle_directory)
-  elseif node:has_children() and config.expand_nested_files and not node:is_expanded() then
+
+  local should_expand_file = config.expand_nested_files and not node:is_expanded()
+  if utils.is_expandable(node) and (node.type ~= "file" or should_expand_file) then
     M.toggle_node(state, toggle_directory)
   else
     open()
@@ -829,6 +853,15 @@ M.rename = function(state, callback)
   fs_actions.rename_node(node.path, callback)
 end
 
+M.rename_basename = function(state, callback)
+  local tree = state.tree
+  local node = tree:get_node()
+  if node.type == "message" then
+    return
+  end
+  fs_actions.rename_node_basename(node.path, callback)
+end
+
 ---Marks potential windows with letters and will open the give node in the picked window.
 ---@param state table The state of the source
 ---@param path string The path to open
@@ -854,10 +887,11 @@ local use_window_picker = function(state, path, cmd)
   local picked_window_id = picker.pick_window()
   if picked_window_id then
     vim.api.nvim_set_current_win(picked_window_id)
+    ---@diagnostic disable-next-line: param-type-mismatch
     local result, err = pcall(vim.cmd, cmd .. " " .. vim.fn.fnameescape(path))
     if result or err == "Vim(edit):E325: ATTENTION" then
       -- fixes #321
-      vim.api.nvim_buf_set_option(0, "buflisted", true)
+      vim.bo[0].buflisted = true
       events.fire_event(events.FILE_OPENED, path)
     else
       log.error("Error opening file:", err)

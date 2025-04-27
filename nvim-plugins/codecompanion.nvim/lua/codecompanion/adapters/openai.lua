@@ -30,9 +30,16 @@ return {
     ---@return boolean
     setup = function(self)
       local model = self.schema.model.default
-      local model_opts = self.schema.model.choices[model]
-      if model_opts and model_opts.opts then
-        self.opts = vim.tbl_deep_extend("force", self.opts, model_opts.opts)
+      if type(model) == "function" then
+        model = model(self)
+      end
+      local choices = self.schema.model.choices
+      if type(choices) == "function" then
+        choices = choices(self)
+      end
+
+      if choices and choices[model] and choices[model].opts then
+        self.opts = vim.tbl_deep_extend("force", self.opts, choices[model].opts)
       end
 
       if self.opts and self.opts.stream then
@@ -61,7 +68,7 @@ return {
         :map(function(m)
           local model = self.schema.model.default
           if type(model) == "function" then
-            model = model()
+            model = model(self)
           end
           if vim.startswith(model, "o1") and m.role == "system" then
             m.role = self.roles.user
@@ -109,6 +116,17 @@ return {
 
         if ok and json.choices and #json.choices > 0 then
           local choice = json.choices[1]
+
+          if choice.finish_reason then
+            local reason = choice.finish_reason
+            if reason ~= "stop" and reason ~= "" then
+              return {
+                status = "error",
+                output = "The stream was stopped with the a finish_reason of '" .. reason .. "'",
+              }
+            end
+          end
+
           local delta = (self.opts and self.opts.stream) and choice.delta or choice.message
 
           if delta then
@@ -137,34 +155,34 @@ return {
     ---Output the data from the API ready for inlining into the current buffer
     ---@param self CodeCompanion.Adapter
     ---@param data string|table The streamed JSON data from the API, also formatted by the format_data handler
-    ---@param context table Useful context about the buffer to inline to
-    ---@return string|table|nil
+    ---@param context? table Useful context about the buffer to inline to
+    ---@return {status: string, output: table}|nil
     inline_output = function(self, data, context)
+      if self.opts.stream then
+        return log:error("Inline output is not supported for non-streaming models")
+      end
+
       if data and data ~= "" then
-        data = utils.clean_streamed_data(data)
-        local ok, json = pcall(vim.json.decode, data, { luanil = { object = true } })
+        local ok, json = pcall(vim.json.decode, data.body, { luanil = { object = true } })
 
-        if ok then
-          --- Some third-party OpenAI forwarding services may have a return package with an empty json.choices.
-          if not json.choices or #json.choices == 0 then
-            return
-          end
+        if not ok then
+          log:error("Error decoding JSON: %s", data.body)
+          return { status = "error", output = json }
+        end
 
-          local choice = json.choices[1]
-          local delta = (self.opts and self.opts.stream) and choice.delta or choice.message
-          if delta.content then
-            return delta.content
-          end
+        local choice = json.choices[1]
+        if choice.message.content then
+          return { status = "success", output = choice.message.content }
         end
       end
     end,
 
     ---Function to run when the request has completed. Useful to catch errors
     ---@param self CodeCompanion.Adapter
-    ---@param data table
+    ---@param data? table
     ---@return nil
     on_exit = function(self, data)
-      if data.status >= 400 then
+      if data and data.status >= 400 then
         log:error("Error: %s", data.body)
       end
     end,
@@ -179,8 +197,9 @@ return {
       default = "gpt-4o",
       choices = {
         ["o3-mini-2025-01-31"] = { opts = { can_reason = true } },
-        ["o1-2024-12-17"] = { opts = { stream = true } },
-        ["o1-mini-2024-09-12"] = { opts = { can_reason = true } },
+        ["o1-2024-12-17"] = { opts = { stream = false } },
+        ["o1-preview"] = { opts = { stream = true } },
+        ["o1-mini-2024-09-12"] = { opts = { stream = true } },
         "gpt-4o",
         "gpt-4o-mini",
         "gpt-4-turbo-preview",
@@ -193,13 +212,13 @@ return {
       mapping = "parameters",
       type = "string",
       optional = true,
-      condition = function(schema)
-        local model = schema.model.default
+      condition = function(self)
+        local model = self.schema.model.default
         if type(model) == "function" then
           model = model()
         end
-        if schema.model.choices[model] and schema.model.choices[model].opts then
-          return schema.model.choices[model].opts.can_reason
+        if self.schema.model.choices[model] and self.schema.model.choices[model].opts then
+          return self.schema.model.choices[model].opts.can_reason
         end
       end,
       default = "medium",

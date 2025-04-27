@@ -11,6 +11,9 @@ local sessions = {}
 local session = nil
 local last_run = nil
 
+---@type dap.log.Log?
+local _log = nil
+
 
 -- lazy import other modules to have a lower startup footprint
 local lazy = setmetatable({
@@ -26,8 +29,12 @@ local lazy = setmetatable({
 })
 
 
+---@return dap.log.Log
 local function log()
-  return require('dap.log').create_logger('dap.log')
+  if not _log then
+    _log = require('dap.log').create_logger('dap.log')
+  end
+  return _log
 end
 
 local function notify(...)
@@ -49,66 +56,69 @@ M.repl = setmetatable({}, {
   end
 })
 
+---@alias dap.RequestListener<T, U> fun(session: dap.Session, err: dap.ErrorResponse?, response: T, args: U, seq: number):boolean?
+
+---@alias dap.EventListener<T> fun(session: dap.Session, body: T):boolean?
 
 ---@class dap.listeners
----@field event_breakpoint table<string, fun(session: dap.Session, body: any)>
----@field event_capabilities table<string, fun(session: dap.Session, body: any)>
----@field event_continued table<string, fun(session: dap.Session, body: any)>
----@field event_exited table<string, fun(session: dap.Session, body: any)>
----@field event_initialized table<string, fun(session: dap.Session, body: any)>
----@field event_invalidated table<string, fun(session: dap.Session, body: any)>
----@field event_loadedSource table<string, fun(session: dap.Session, body: any)>
----@field event_memory table<string, fun(session: dap.Session, body: any)>
----@field event_module table<string, fun(session: dap.Session, body: any)>
----@field event_output table<string, fun(session: dap.Session, body: any)>
----@field event_process table<string, fun(session: dap.Session, body: any)>
----@field event_progressEnd table<string, fun(session: dap.Session, body: dap.ProgressEndEvent)>
----@field event_progressStart table<string, fun(session: dap.Session, body: dap.ProgressStartEvent)>
----@field event_progressUpdate table<string, fun(session: dap.Session, body: dap.ProgressUpdateEvent)>
----@field event_stopped table<string, fun(session: dap.Session, body: dap.StoppedEvent)>
----@field event_terminated table<string, fun(session: dap.Session, body: dap.TerminatedEvent)>
----@field event_thread table<string, fun(session: dap.Session, body: any)>
----@field attach table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field breakpointLocations table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field completions table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field configurationDone table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field continue table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field dataBreakpointInfo table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field disassemble table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field disconnect table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field evaluate table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field exceptionInfo table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field goto table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field gotoTargets table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field initialize table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field launch table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field loadedSources table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field modules table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field next table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field pause table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field readMemory table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field restart table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field restartFrame table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field reverseContinue table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field scopes table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field setBreakpoints table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field setDataBreakpoints table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field setExceptionBreakpoints table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field setExpression table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field setFunctionBreakpoints table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field setInstructionBreakpoints table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field setVariable table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field source table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field stackTrace table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field stepBack table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field stepIn table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field stepInTargets table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field stepOut table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field terminate table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field terminateThreads table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field threads table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field variables table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
----@field writeMemory table<string, fun(session: dap.Session, err: any, body: any, request: any, seq: number)>
+---@field event_breakpoint table<string, dap.EventListener<dap.BreakpointEvent>>
+---@field event_capabilities table<string, dap.EventListener<any>>
+---@field event_continued table<string, dap.EventListener<dap.ContinuedEvent>>
+---@field event_exited table<string, dap.EventListener<any>>
+---@field event_initialized table<string, dap.EventListener<dap.InitializedEvent>>
+---@field event_invalidated table<string, dap.EventListener<any>>
+---@field event_loadedSource table<string, dap.EventListener<any>>
+---@field event_memory table<string, dap.EventListener<any>>
+---@field event_module table<string, dap.EventListener<any>>
+---@field event_output table<string, dap.EventListener<dap.OutputEvent>>
+---@field event_process table<string, dap.EventListener<any>>
+---@field event_progressEnd table<string, dap.EventListener<dap.ProgressEndEvent>>
+---@field event_progressStart table<string, dap.EventListener<dap.ProgressStartEvent>>
+---@field event_progressUpdate table<string, dap.EventListener<dap.ProgressUpdateEvent>>
+---@field event_stopped table<string, dap.EventListener<dap.StoppedEvent>>
+---@field event_terminated table<string, dap.EventListener<dap.TerminatedEvent>>
+---@field event_thread table<string, dap.EventListener<dap.ThreadEvent>>
+---@field attach table<string, dap.RequestListener>
+---@field breakpointLocations table<string, dap.RequestListener>
+---@field completions table<string, dap.RequestListener<dap.CompletionsResponse, dap.CompletionsArguments>>
+---@field configurationDone table<string, dap.RequestListener>
+---@field continue table<string, dap.RequestListener>
+---@field dataBreakpointInfo table<string, dap.RequestListener>
+---@field disassemble table<string, dap.RequestListener>
+---@field disconnect table<string, dap.RequestListener<any, dap.DisconnectArguments>>
+---@field evaluate table<string, dap.RequestListener<dap.EvaluateResponse, dap.EvaluateArguments>>
+---@field exceptionInfo table<string, dap.RequestListener>
+---@field goto table<string, dap.RequestListener>
+---@field gotoTargets table<string, dap.RequestListener>
+---@field initialize table<string, dap.RequestListener<dap.Capabilities?, dap.InitializeRequestArguments>>
+---@field launch table<string, dap.RequestListener>
+---@field loadedSources table<string, dap.RequestListener>
+---@field modules table<string, dap.RequestListener>
+---@field next table<string, dap.RequestListener>
+---@field pause table<string, dap.RequestListener>
+---@field readMemory table<string, dap.RequestListener>
+---@field restart table<string, dap.RequestListener>
+---@field restartFrame table<string, dap.RequestListener>
+---@field reverseContinue table<string, dap.RequestListener>
+---@field scopes table<string, dap.RequestListener>
+---@field setBreakpoints table<string, dap.RequestListener>
+---@field setDataBreakpoints table<string, dap.RequestListener>
+---@field setExceptionBreakpoints table<string, dap.RequestListener>
+---@field setExpression table<string, dap.RequestListener>
+---@field setFunctionBreakpoints table<string, dap.RequestListener>
+---@field setInstructionBreakpoints table<string, dap.RequestListener>
+---@field setVariable table<string, dap.RequestListener>
+---@field source table<string, dap.RequestListener>
+---@field stackTrace table<string, dap.RequestListener>
+---@field stepBack table<string, dap.RequestListener>
+---@field stepIn table<string, dap.RequestListener>
+---@field stepInTargets table<string, dap.RequestListener>
+---@field stepOut table<string, dap.RequestListener>
+---@field terminate table<string, dap.RequestListener>
+---@field terminateThreads table<string, dap.RequestListener>
+---@field threads table<string, dap.RequestListener>
+---@field variables table<string, dap.RequestListener<dap.VariableResponse, dap.VariablesArguments>>
+---@field writeMemory table<string, dap.RequestListener>
 
 
 M.listeners = {
@@ -146,17 +156,20 @@ end
 M.defaults = setmetatable(
   {
     fallback = {
-      exception_breakpoints = 'default';
+      exception_breakpoints = 'default',
       ---@type "statement"|"line"|"instruction"
-      stepping_granularity = 'statement';
+      stepping_granularity = 'statement',
 
-      ---@type string|fun(): number bufnr, number|nil win
-      terminal_win_cmd = 'belowright new';
-      focus_terminal = false;
-      auto_continue_if_many_stopped = true;
+      ---@type string|fun(config: dap.Configuration):(integer, integer?)
+      terminal_win_cmd = 'belowright new',
+      focus_terminal = false,
+      auto_continue_if_many_stopped = true,
 
       ---@type string|nil
-      switchbuf = nil
+      switchbuf = nil,
+
+      ---@type nil|fun(session: dap.Session, output: dap.OutputEvent)
+      on_output = nil,
     },
   },
   {
@@ -249,6 +262,7 @@ M.adapters = {}
 ---@field type string
 ---@field request "launch"|"attach"
 ---@field name string
+---@field [string] any
 
 
 --- Configurations per adapter. See `:help dap-configuration` for more help.
@@ -283,7 +297,7 @@ end
 
 
 providers.configs["dap.global"] = function(bufnr)
-  local filetype = vim.bo[bufnr].filetype
+  local filetype = vim.b["dap-srcft"] or vim.bo[bufnr].filetype
   local configurations = M.configurations[filetype] or {}
   assert(
     islist(configurations),
@@ -298,7 +312,12 @@ end
 
 providers.configs["dap.launch.json"] = function()
   local ok, configs = pcall(require("dap.ext.vscode").getconfigs)
-  return ok and configs or {}
+  if not ok then
+    local msg = "Can't get configurations from launch.json:\n%s" .. configs
+    vim.notify_once(msg, vim.log.levels.WARN, {title = "DAP"})
+    return {}
+  end
+  return configs
 end
 
 do
@@ -425,32 +444,47 @@ local function add_reset_session_hook(lsession)
   end
 end
 
+local adapter_types = {
+  executable = true,
+  server = true,
+  pipe = true
+}
 
-local function run_adapter(adapter, configuration, opts)
-  local name = configuration.name or '[no name]'
-  local options = adapter.options or {}
-  opts = vim.tbl_extend('keep', opts, {
-    cwd = options.cwd,
-    env = options.env
-  })
+---@param adapter dap.Adapter
+---@param config dap.Configuration
+---@param opts table
+local function run_adapter(adapter, config, opts)
+  local name = config.name or '[no name]'
+  local valid_type = adapter_types[adapter.type]
+  if not valid_type then
+    local msg = string.format('Invalid adapter type %s, expected `executable`, `server` or `pipe`', adapter.type)
+    notify(msg, vim.log.levels.ERROR)
+    return
+  end
+  lazy.progress.report('Running: ' .. name)
+  local lsession
   if adapter.type == 'executable' then
-    lazy.progress.report('Running: ' .. name)
-    M.launch(adapter, configuration, opts)
+    ---@cast adapter dap.ExecutableAdapter
+    local options = adapter.options or {}
+    opts = vim.tbl_extend('keep', opts, {
+      cwd = options.cwd,
+      env = options.env
+    })
+    lsession = M.launch(adapter, config, opts)
   elseif adapter.type == 'server' then
-    lazy.progress.report('Running: ' .. name)
-    M.attach(adapter, configuration, opts)
+    ---@cast adapter dap.ServerAdapter
+    lsession = M.attach(adapter, config, opts)
   elseif adapter.type == "pipe" then
-    lazy.progress.report("Running: " .. name)
-    local lsession
-    lsession = require("dap.session").pipe(adapter, opts, function(err)
+    ---@cast adapter dap.PipeAdapter
+    lsession = require("dap.session").pipe(adapter, config, opts, function(err)
       if not err then
-        lsession:initialize(configuration)
+        lsession:initialize(config)
       end
     end)
+  end
+  if lsession then
     add_reset_session_hook(lsession)
     M.set_session(lsession)
-  else
-    notify(string.format('Invalid adapter type %s, expected `executable` or `server`', adapter.type), vim.log.levels.ERROR)
   end
 end
 
@@ -683,7 +717,7 @@ function M.step_into(opts)
   session:request('stepInTargets', { frameId = session.current_frame.id }, function(err, response)
     if err then
       notify(
-        'Error on step_into: ' .. lazy.utils.fmt_error(err) .. ' (while requesting stepInTargets)',
+        'Error on step_into: ' .. tostring(err) .. ' (while requesting stepInTargets)',
         vim.log.levels.ERROR
       )
       return
@@ -759,7 +793,7 @@ local function terminate(lsession, opts)
   end
 
   if lsession.closed then
-    log().warn('User called terminate on already closed session that is still in use')
+    log():warn('User called terminate on already closed session that is still in use')
     sessions[lsession.id] = nil
     M.set_session(nil)
     on_done()
@@ -773,7 +807,7 @@ local function terminate(lsession, opts)
     local timeout_ms = timeout_sec * 1000
     lsession:request_with_timeout('terminate', args, timeout_ms, function(err)
       if err then
-        log().warn(lazy.utils.fmt_error(err))
+        log():warn(tostring(err))
       end
       if not lsession.closed then
         lsession:close()
@@ -836,7 +870,7 @@ function M.terminate(opts, disconnect_opts, cb)
     if not lsession then
       local _, s = next(sessions)
       if s then
-        log().info("Terminate called without active session, switched to", s.id)
+        log():info("Terminate called without active session, switched to", s.id)
       end
       lsession = s
     end
@@ -903,7 +937,7 @@ function M.restart(config, opts)
       config = prepare_config(config)
       lsession:request('restart', config, function(err0, _)
         if err0 then
-          notify('Error restarting debug adapter: ' .. lazy.utils.fmt_error(err0), vim.log.levels.ERROR)
+          notify('Error restarting debug adapter: ' .. tostring(err0), vim.log.levels.ERROR)
         else
           notify('Restarted debug adapter', vim.log.levels.INFO)
         end
@@ -932,7 +966,7 @@ function M.list_breakpoints(openqf)
   end
   vim.fn.setqflist({}, action, {
     items = qf_list,
-    context = DAP_QUICKFIX_CONTEXT,
+    context = { DAP_QUICKFIX_CONTEXT },
     title = DAP_QUICKFIX_TITLE
   })
   if openqf then
@@ -1176,6 +1210,7 @@ function M.disconnect(opts, cb)
 end
 
 
+---@private
 --- Connect to a debug adapter via TCP
 ---@param adapter dap.ServerAdapter
 ---@param config dap.Configuration
@@ -1187,7 +1222,7 @@ function M.attach(adapter, config, opts)
   end
   assert(adapter.port, 'Adapter used with attach must have a port property')
   local s
-  s = require('dap.session'):connect(adapter, opts, function(err)
+  s = require('dap.session').connect(adapter, config, opts, function(err)
     if err then
       notify(
         string.format("Couldn't connect to %s:%s: %s", adapter.host or '127.0.0.1', adapter.port, err),
@@ -1199,28 +1234,28 @@ function M.attach(adapter, config, opts)
       end
     end
   end)
-  add_reset_session_hook(s)
-  M.set_session(s)
   return s
 end
 
 
+---@private
 --- Launch an executable debug adapter and initialize a session
 ---
 ---@param adapter dap.ExecutableAdapter
 ---@param config dap.Configuration
 ---@param opts table
 function M.launch(adapter, config, opts)
-  local s = require('dap.session'):spawn(adapter, opts)
-  add_reset_session_hook(s)
-  M.set_session(s)
+  local s = require('dap.session').spawn(adapter, config, opts)
+  if not s then
+    return
+  end
   s:initialize(config)
   return s
 end
 
 
 function M.set_log_level(level)
-  log().set_level(level)
+  log():set_level(level)
 end
 
 
@@ -1329,6 +1364,9 @@ api.nvim_create_autocmd("ExitPre", {
       return session == nil and next(sessions) == nil
     end)
     M.repl.close()
+    if _log then
+      _log:close()
+    end
   end
 })
 

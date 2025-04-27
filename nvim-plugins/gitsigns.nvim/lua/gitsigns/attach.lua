@@ -13,88 +13,39 @@ local dprintf = log.dprintf
 local throttle_by_id = require('gitsigns.debounce').throttle_by_id
 
 local api = vim.api
-local uv = vim.loop
+local uv = vim.uv or vim.loop ---@diagnostic disable-line: deprecated
 
 --- @class gitsigns.attach
 local M = {}
 
 --- @param name string
---- @return string? buffer
+--- @return string? rel_path
 --- @return string? commit
-local function parse_fugitive_uri(name)
-  if vim.fn.exists('*FugitiveReal') == 0 then
-    dprint('Fugitive not installed')
+--- @return string? gitdir
+local function parse_git_path(name)
+  if not vim.startswith(name, 'fugitive://') and not vim.startswith(name, 'gitsigns://') then
     return
   end
 
-  ---@type string
-  local path = vim.fn.FugitiveReal(name)
-  ---@type string?
-  local commit = vim.fn.FugitiveParse(name)[1]:match('([^:]+):.*')
-  if commit == '0' then
-    -- '0' means the index so clear commit so we attach normally
-    commit = nil
-  end
-  return path, commit
-end
+  local proto, gitdir, tail = unpack(vim.split(name, '//'))
+  assert(proto and gitdir and tail)
+  local plugin = proto:sub(1, 1):upper() .. proto:sub(2, -2)
 
---- @param name string
---- @return string buffer
---- @return string? commit
-local function parse_gitsigns_uri(name)
-  local _proto, head, tail = unpack(vim.split(name, '//'))
-
-  --- @type any, any, string?, string?
-  local _, _, root_path, sub_path = head:find([[(.*)/%.git(.*)]])
-
-  --- @type any, any, string?, string?
-  local _, _, commit, rel_path = tail:find([[(.*):(.*)]])
-
-  commit = util.norm_base(commit)
-
-  if root_path then
-    if sub_path then
-      sub_path = sub_path:gsub('^/modules/', '')
-      name = string.format('%s/%s/%s', root_path, sub_path, rel_path)
-    else
-      name = string.format('%s/%s', root_path, rel_path)
+  local commit, rel_path --- @type string?, string
+  if plugin == 'Gitsigns' then
+    commit = tail:match('^(:?[^:]+):')
+    rel_path = tail:match('^:?[^:]+:(.*)')
+  else -- Fugitive
+    commit = tail:match('^([^/]+)/')
+    if commit and commit:match('^[0-3]$') then
+      --- @diagnostic disable-next-line: no-unknown
+      commit = ':' .. commit
     end
+    rel_path = tail:match('^[^/]+/(.*)')
   end
 
-  return name, commit
-end
-
---- @param bufnr integer
---- @return string buffer
---- @return string? commit
---- @return boolean? force_attach
-local function get_buf_path(bufnr)
-  local file = uv.fs_realpath(api.nvim_buf_get_name(bufnr))
-    or api.nvim_buf_call(bufnr, function()
-      return vim.fn.expand('%:p')
-    end)
-
-  if vim.startswith(file, 'fugitive://') then
-    local path, commit = parse_fugitive_uri(file)
-    dprintf("Fugitive buffer for file '%s' from path '%s'", path, file)
-    if path then
-      local realpath = uv.fs_realpath(path)
-      if realpath and vim.fn.isdirectory(realpath) == 0 then
-        return realpath, commit, true
-      end
-    end
-  end
-
-  if vim.startswith(file, 'gitsigns://') then
-    local path, commit = parse_gitsigns_uri(file)
-    dprintf("Gitsigns buffer for file '%s' from path '%s' on commit '%s'", path, file, commit)
-    local realpath = uv.fs_realpath(path)
-    if realpath then
-      return realpath, commit, true
-    end
-  end
-
-  return file
+  dprintf("%s buffer for file '%s' from path '%s' on commit '%s'", plugin, rel_path, name, commit)
+  return rel_path, commit, gitdir
 end
 
 local function on_lines(_, bufnr, _, first, last_orig, last_new, byte_count)
@@ -110,7 +61,7 @@ end
 --- @param bufnr integer
 local function on_reload(_, bufnr)
   local __FUNC__ = 'on_reload'
-  cache[bufnr]:invalidate()
+  assert(cache[bufnr]):invalidate()
   dprint('Reload')
   manager.update_debounced(bufnr)
 end
@@ -122,6 +73,7 @@ local function on_detach(_, bufnr)
   M.detach(bufnr, true)
 end
 
+--- @async
 --- @param bufnr integer
 --- @return string?
 --- @return string?
@@ -130,7 +82,7 @@ local function on_attach_pre(bufnr)
   local gitdir, toplevel
   if config._on_attach_pre then
     --- @type {gitdir: string?, toplevel: string?}
-    local res = async.wait(2, config._on_attach_pre, bufnr)
+    local res = async.await(2, config._on_attach_pre, bufnr)
     dprintf('ran on_attach_pre with result %s', vim.inspect(res))
     if type(res) == 'table' then
       if type(res.gitdir) == 'string' then
@@ -142,25 +94,6 @@ local function on_attach_pre(bufnr)
     end
   end
   return gitdir, toplevel
-end
-
---- @param _bufnr integer
---- @param file string
---- @param revision string?
---- @param encoding string
---- @return Gitsigns.GitObj?
-local function try_worktrees(_bufnr, file, revision, encoding)
-  if not config.worktrees then
-    return
-  end
-
-  for _, wt in ipairs(config.worktrees) do
-    local git_obj = git.Obj.new(file, revision, encoding, wt.gitdir, wt.toplevel)
-    if git_obj and git_obj.object_name then
-      dprintf('Using worktree %s', vim.inspect(wt))
-      return git_obj
-    end
-  end
 end
 
 local setup = util.once(function()
@@ -176,7 +109,11 @@ local setup = util.once(function()
         return
       end
       bcache:invalidate(true)
-      manager.update(buf)
+      async
+        .arun(function()
+          manager.update(buf)
+        end)
+        :raise_on_error()
     end,
   })
 
@@ -188,12 +125,22 @@ local setup = util.once(function()
   })
 end)
 
+--- @param bufnr integer
+--- @param expr string
+--- @return string
+local function buf_expand(bufnr, expr)
+  return api.nvim_buf_call(bufnr, function()
+    return vim.fn.expand(expr)
+  end)
+end
+
 --- @class Gitsigns.GitContext
 --- @field file string
 --- @field toplevel? string
 --- @field gitdir? string
 --- @field base? string
 
+--- @async
 --- @param bufnr integer
 --- @return Gitsigns.GitContext? ctx
 --- @return string? err
@@ -202,24 +149,27 @@ local function get_buf_context(bufnr)
     return nil, 'Exceeds max_file_length'
   end
 
-  local file, commit, force_attach = get_buf_path(bufnr)
+  local file = uv.fs_realpath(api.nvim_buf_get_name(bufnr)) or buf_expand(bufnr, '%:p')
 
-  if vim.bo[bufnr].buftype ~= '' and not force_attach then
-    return nil, 'Non-normal buffer'
+  local rel_path, commit, gitdir_from_bufname = parse_git_path(file)
+
+  if not gitdir_from_bufname then
+    if vim.bo[bufnr].buftype ~= '' then
+      return nil, 'Non-normal buffer'
+    end
+
+    local file_dir = util.dirname(file)
+    if not file_dir or not util.path_exists(file_dir) then
+      return nil, 'Not a path'
+    end
   end
 
-  local file_dir = util.dirname(file)
-
-  if not file_dir or not util.path_exists(file_dir) then
-    return nil, 'Not a path'
-  end
-
-  local gitdir, toplevel = on_attach_pre(bufnr)
+  local gitdir_oap, toplevel_oap = on_attach_pre(bufnr)
 
   return {
-    file = file,
-    gitdir = gitdir,
-    toplevel = toplevel,
+    file = rel_path or file,
+    gitdir = gitdir_oap or gitdir_from_bufname,
+    toplevel = toplevel_oap,
     -- Stage buffers always compare against the common ancestor (':1')
     -- :0: index
     -- :1: common ancestor
@@ -229,6 +179,7 @@ local function get_buf_context(bufnr)
   }
 end
 
+--- @async
 --- Ensure attaches cannot be interleaved for the same buffer.
 --- Since attaches are asynchronous we need to make sure an attach isn't
 --- performed whilst another one is in progress.
@@ -281,10 +232,12 @@ local attach_throttled = throttle_by_id(function(cbuf, ctx, aucmd)
   local git_obj = git.Obj.new(file, revision, encoding, ctx.gitdir, ctx.toplevel)
 
   if not git_obj and not passed_ctx then
-    git_obj = try_worktrees(cbuf, file, revision, encoding)
-    async.scheduler()
-    if not api.nvim_buf_is_valid(cbuf) then
-      return
+    for _, wt in ipairs(config.worktrees or {}) do
+      git_obj = git.Obj.new(file, revision, encoding, wt.gitdir, wt.toplevel)
+      if git_obj and git_obj.object_name then
+        dprintf('Using worktree %s', vim.inspect(wt))
+        break
+      end
     end
   end
 
@@ -293,7 +246,7 @@ local attach_throttled = throttle_by_id(function(cbuf, ctx, aucmd)
     return
   end
 
-  async.scheduler()
+  async.schedule()
   if not api.nvim_buf_is_valid(cbuf) then
     return
   end
@@ -304,7 +257,9 @@ local attach_throttled = throttle_by_id(function(cbuf, ctx, aucmd)
     gitdir = git_obj.repo.gitdir,
   })
 
-  if not passed_ctx and (not util.path_exists(file) or uv.fs_stat(file).type == 'directory') then
+  if
+    not passed_ctx and (not util.path_exists(file) or assert(uv.fs_stat(file)).type == 'directory')
+  then
     dprint('Not a file')
     return
   end
@@ -321,7 +276,7 @@ local attach_throttled = throttle_by_id(function(cbuf, ctx, aucmd)
 
   -- On windows os.tmpname() crashes in callback threads so initialise this
   -- variable on the main thread.
-  async.scheduler()
+  async.schedule()
   if not api.nvim_buf_is_valid(cbuf) then
     return
   end
@@ -331,11 +286,7 @@ local attach_throttled = throttle_by_id(function(cbuf, ctx, aucmd)
     return
   end
 
-  cache[cbuf] = Cache.new({
-    bufnr = cbuf,
-    file = file,
-    git_obj = git_obj,
-  })
+  cache[cbuf] = Cache.new(cbuf, file, git_obj)
 
   if config.watch_gitdir.enable then
     local watcher = require('gitsigns.watcher')

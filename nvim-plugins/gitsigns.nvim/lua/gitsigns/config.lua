@@ -9,7 +9,7 @@
 --- @field description string
 
 --- @class (exact) Gitsigns.DiffOpts
---- @field algorithm string
+--- @field algorithm 'myers'|'minimal'|'patience'|'histogram'
 --- @field internal boolean
 --- @field indent_heuristic boolean
 --- @field vertical boolean
@@ -75,7 +75,7 @@
 --- @field current_line_blame_formatter string|Gitsigns.CurrentLineBlameFmtFun
 --- @field current_line_blame_formatter_nc string|Gitsigns.CurrentLineBlameFmtFun
 --- @field current_line_blame_opts Gitsigns.CurrentLineBlameOpts
---- @field preview_config table<string,any>
+--- @field preview_config vim.api.keyset.win_config
 --- @field auto_attach boolean
 --- @field attach_to_untracked boolean
 --- @field worktrees {toplevel: string, gitdir: string}[]
@@ -84,10 +84,10 @@
 --- -- Undocumented
 --- @field _refresh_staged_on_update boolean
 --- @field _threaded_diff boolean
---- @field _inline2 boolean
 --- @field _git_version string
 --- @field _verbose boolean
 --- @field _test_mode boolean
+--- @field _new_sign_calc boolean
 
 local M = {
   Config = {
@@ -493,6 +493,7 @@ M.schema = {
 
   show_deleted = {
     type = 'boolean',
+    deprecated = true,
     default = false,
     description = [[
       Show the old version of hunks inline in the buffer (via virtual lines).
@@ -874,11 +875,11 @@ M.schema = {
     ]],
   },
 
-  _inline2 = {
+  _new_sign_calc = {
     type = 'boolean',
-    default = true,
+    default = false,
     description = [[
-      Enable enhanced version of preview_hunk_inline()
+      Use new sign calculation method
     ]],
   },
 
@@ -892,7 +893,16 @@ M.schema = {
   },
 }
 
---- @param config Gitsigns.Config
+local function validate(k, v, ty)
+  if vim.fn.has('nvim-0.11') == 1 then
+    --- @diagnostic disable-next-line: redundant-parameter,param-type-mismatch
+    vim.validate(k, v, ty)
+  else
+    vim.validate({ [k] = { v, ty } })
+  end
+end
+
+--- @param config table
 local function validate_config(config)
   for k, v in
     pairs(config --[[@as table<string,any>]])
@@ -903,7 +913,7 @@ local function validate_config(config)
     else
       local ty = kschema.type
       if type(ty) == 'string' or type(ty) == 'function' then
-        vim.validate({ [k] = { v, ty } })
+        validate(k, v, ty)
       end
     end
   end
@@ -943,7 +953,7 @@ local function build_field(k, v, user_val)
   end
 end
 
---- @param user_config Gitsigns.Config|nil
+--- @param user_config table?
 function M.build(user_config)
   user_config = user_config or {}
 
@@ -952,11 +962,13 @@ function M.build(user_config)
   validate_config(user_config)
 
   for k, v in pairs(M.schema) do
-    if user_config[k] ~= nil then
-      build_field(k, v, user_config[k])
+    --- @type any
+    local user_config_k = user_config[k]
+    if user_config_k ~= nil then
+      build_field(k, v, user_config_k)
       if v.refresh then
         v.refresh(function()
-          build_field(k, v, user_config[k])
+          build_field(k, v, user_config_k)
         end)
       end
     end

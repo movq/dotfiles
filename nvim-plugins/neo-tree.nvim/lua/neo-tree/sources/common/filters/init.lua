@@ -1,28 +1,17 @@
 ---A generalization of the filter functionality to directly filter the
 ---source tree instead of relying on pre-filtered data, which is specific
 ---to the filesystem source.
-local vim = vim
 local Input = require("nui.input")
 local event = require("nui.utils.autocmd").event
 local popups = require("neo-tree.ui.popups")
 local renderer = require("neo-tree.ui.renderer")
 local utils = require("neo-tree.utils")
+local compat = require("neo-tree.utils._compat")
 local log = require("neo-tree.log")
 local manager = require("neo-tree.sources.manager")
 local fzy = require("neo-tree.sources.common.filters.filter_fzy")
 
 local M = {}
-
-local cmds = {
-  move_cursor_down = function(state, scroll_padding)
-    renderer.focus_node(state, nil, true, 1, scroll_padding)
-  end,
-
-  move_cursor_up = function(state, scroll_padding)
-    renderer.focus_node(state, nil, true, -1, scroll_padding)
-    vim.cmd("redraw!")
-  end,
-}
 
 ---Reset the current filter to the empty string.
 ---@param state any
@@ -39,7 +28,7 @@ local reset_filter = function(state, refresh, open_current_node)
 
   -- reset search state
   if state.open_folders_before_search then
-    state.force_open_folders = vim.deepcopy(state.open_folders_before_search, { noref = 1 })
+    state.force_open_folders = vim.deepcopy(state.open_folders_before_search, compat.noref())
   else
     state.force_open_folders = nil
   end
@@ -118,6 +107,9 @@ M.show_filter = function(state, search_as_you_type, keep_filter_on_submit)
   local popup_msg = "Search:"
   if search_as_you_type then
     popup_msg = "Filter:"
+  end
+  if state.config.title then
+    popup_msg = state.config.title
   end
 
   local width = vim.fn.winwidth(0) - 2
@@ -200,16 +192,30 @@ M.show_filter = function(state, search_as_you_type, keep_filter_on_submit)
     end
   end)
 
+  ---@enum (key) neotree.FuzzyFinder.Commands
+  local cmds = {
+    move_cursor_down = function(state_, scroll_padding_)
+      renderer.focus_node(state_, nil, true, 1, scroll_padding_)
+    end,
+
+    move_cursor_up = function(state_, scroll_padding_)
+      renderer.focus_node(state_, nil, true, -1, scroll_padding_)
+      vim.cmd("redraw!")
+    end,
+
+    close = function()
+      vim.cmd("stopinsert")
+      input:unmount()
+      if utils.truthy(state.search_pattern) then
+        reset_filter(state, true)
+      end
+      restore_height()
+    end,
+  }
+
   -- create mappings and autocmd
   input:map("i", "<C-w>", "<C-S-w>", { noremap = true })
-  input:map("i", "<esc>", function(bufnr)
-    vim.cmd("stopinsert")
-    input:unmount()
-    if utils.truthy(state.search_pattern) then
-      reset_filter(state, true)
-    end
-    restore_height()
-  end, { noremap = true })
+  input:map("i", "<esc>", cmds.close, { noremap = true })
 
   local config = require("neo-tree").config
   for lhs, cmd_name in pairs(config.filesystem.window.fuzzy_finder_mappings) do

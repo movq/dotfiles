@@ -22,7 +22,7 @@ docs: deps/panvimdoc
 
 format:
 	@echo Formatting...
-	@stylua lua/ -f ./stylua.toml
+	@stylua tests/ lua/ -f ./stylua.toml
 
 test: deps
 	@echo Testing...
@@ -31,12 +31,6 @@ test: deps
 test_file: deps
 	@echo Testing File...
 	nvim --headless --noplugin -u ./scripts/minimal_init.lua -c "lua MiniTest.run_file('$(FILE)')"
-
-plenary:
-	@echo "===> Testing:"
-	nvim --headless --clean \
-	-u scripts/minimal_init.lua \
-	-c "PlenaryBustedDirectory lua/spec/codecompanion { minimal_init = 'scripts/minimal_init.lua' }"
 
 deps: deps/plenary.nvim deps/nvim-treesitter deps/mini.nvim deps/panvimdoc
 	@echo Pulling...

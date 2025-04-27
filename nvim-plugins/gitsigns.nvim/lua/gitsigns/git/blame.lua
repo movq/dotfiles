@@ -1,7 +1,8 @@
-local uv = vim.uv or vim.loop
+local uv = vim.uv or vim.loop ---@diagnostic disable-line: deprecated
 
 local error_once = require('gitsigns.message').error_once
 local log = require('gitsigns.debug.log')
+local util = require('gitsigns.util')
 
 --- @class Gitsigns.CommitInfo
 --- @field author string
@@ -75,7 +76,7 @@ end
 ---@param x any
 ---@return integer
 local function asinteger(x)
-  return assert(tonumber(x))
+  return assert(util.tointeger(x))
 end
 
 --- @param readline fun(): string?
@@ -84,7 +85,7 @@ end
 local function incremental_iter(readline, commits, result)
   local line = assert(readline())
 
-  --- @type string, string, string, string
+  --- @type string?, string, string, string
   local sha, orig_lnum_str, final_lnum_str, size_str = line:match('(%x+) (%d+) (%d+) (%d+)')
   assert(sha)
 
@@ -92,7 +93,7 @@ local function incremental_iter(readline, commits, result)
   local final_lnum = asinteger(final_lnum_str)
   local size = asinteger(size_str)
 
-  --- @type table<string,string|true>
+  --- @type table<string,string|integer|true>
   local commit = commits[sha] or {
     sha = sha,
     abbrev_sha = sha:sub(1, 8),
@@ -111,9 +112,10 @@ local function incremental_iter(readline, commits, result)
     elseif key then
       key = key:gsub('%-', '_') --- @type string
       if vim.endswith(key, '_time') then
-        value = tonumber(value)
+        commit[key] = asinteger(value)
+      else
+        commit[key] = value
       end
-      commit[key] = value
     else
       commit[line] = true
       if line ~= 'boundary' then
@@ -135,7 +137,7 @@ local function incremental_iter(readline, commits, result)
   then
     commit = vim.tbl_extend('force', commit, NOT_COMMITTED)
   end
-  commits[sha] = commit
+  commits[sha] = commit --[[@as Gitsigns.CommitInfo]]
 
   for j = 0, size - 1 do
     result[final_lnum + j] = {
@@ -161,7 +163,7 @@ end
 
 --- @param f fun(readline: fun(): string?))
 --- @return fun(data: string?)
-local function bufferred_line_reader(f)
+local function buffered_line_reader(f)
   --- @param data string?
   return coroutine.wrap(function(data)
     if not data then
@@ -171,6 +173,7 @@ local function bufferred_line_reader(f)
     local data_lines = data_to_lines(data)
     local i = 0
 
+    --- @async
     local function readline(peek)
       if not data_lines[i + 1] then
         data = coroutine.yield()
@@ -182,7 +185,7 @@ local function bufferred_line_reader(f)
       end
 
       if peek then
-        return data_lines[ i+ 1]
+        return data_lines[i + 1]
       end
       i = i + 1
       return data_lines[i]
@@ -194,21 +197,23 @@ local function bufferred_line_reader(f)
   end)
 end
 
+--- @async
 --- @param obj Gitsigns.GitObj
---- @param lines string[]
+--- @param contents? string[]
 --- @param lnum? integer
 --- @param revision? string
 --- @param opts? Gitsigns.BlameOpts
 --- @return table<integer, Gitsigns.BlameInfo>
-function M.run_blame(obj, lines, lnum, revision, opts)
+function M.run_blame(obj, contents, lnum, revision, opts)
   local ret = {} --- @type table<integer,Gitsigns.BlameInfo>
 
   if not obj.object_name or obj.repo.abbrev_head == '' then
+    assert(contents, 'contents must be provided for untracked files')
     -- As we support attaching to untracked files we need to return something if
     -- the file isn't isn't tracked in git.
     -- If abbrev_head is empty, then assume the repo has no commits
     local commit = not_committed(obj.file)
-    for i in ipairs(lines) do
+    for i in ipairs(contents) do
       ret[i] = {
         orig_lnum = 0,
         final_lnum = i,
@@ -219,34 +224,13 @@ function M.run_blame(obj, lines, lnum, revision, opts)
     return ret
   end
 
-  local args = { 'blame', '--contents', '-', '--incremental' }
-
   opts = opts or {}
 
-  if opts.ignore_whitespace then
-    args[#args + 1] = '-w'
-  end
-
-  if lnum then
-    vim.list_extend(args, { '-L', lnum .. ',+1' })
-  end
-
-  if opts.extra_opts then
-    vim.list_extend(args, opts.extra_opts)
-  end
-
   local ignore_file = obj.repo.toplevel .. '/.git-blame-ignore-revs'
-  if uv.fs_stat(ignore_file) then
-    vim.list_extend(args, { '--ignore-revs-file', ignore_file })
-  end
-
-  args[#args + 1] = revision
-  args[#args + 1] = '--'
-  args[#args + 1] = obj.file
 
   local commits = {} --- @type table<string,Gitsigns.CommitInfo>
 
-  local reader = bufferred_line_reader(function(readline)
+  local reader = buffered_line_reader(function(readline)
     incremental_iter(readline, commits, ret)
   end)
 
@@ -255,7 +239,24 @@ function M.run_blame(obj, lines, lnum, revision, opts)
     reader(data)
   end
 
-  local _, stderr = obj.repo:command(args, { stdin = lines, stdout = on_stdout, ignore_error = true })
+  local contents_str = contents and table.concat(contents, '\n') or nil
+
+  local _, stderr = obj.repo:command({
+    'blame',
+    '--incremental',
+    contents and { '--contents', '-' },
+    opts.ignore_whitespace and '-w',
+    lnum and { '-L', lnum .. ',+1' },
+    opts.extra_opts,
+    uv.fs_stat(ignore_file) and { '--ignore-revs-file', ignore_file },
+    revision,
+    '--',
+    obj.file,
+  }, {
+    stdin = contents_str,
+    stdout = on_stdout,
+    ignore_error = true,
+  })
 
   if stderr then
     error_once('Error running git-blame: ' .. stderr)

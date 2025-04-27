@@ -191,6 +191,14 @@ list.bitbake = {
   maintainers = { "@amaanq" },
 }
 
+list.blade = {
+  install_info = {
+    url = "https://github.com/EmranMR/tree-sitter-blade",
+    files = { "src/parser.c" },
+  },
+  maintainers = { "@calebdw" },
+}
+
 list.blueprint = {
   install_info = {
     url = "https://gitlab.com/gabmus/tree-sitter-blueprint.git",
@@ -208,6 +216,14 @@ list.bp = {
   maintainers = { "@ambroisie" },
 }
 
+list.brightscript = {
+  install_info = {
+    url = "https://github.com/ajdelcimmuto/tree-sitter-brightscript",
+    files = { "src/parser.c" },
+  },
+  maintainers = { "@ajdelcimmuto" },
+}
+
 list.c = {
   install_info = {
     url = "https://github.com/tree-sitter/tree-sitter-c",
@@ -223,6 +239,14 @@ list.c_sharp = {
   },
   filetype = "cs",
   maintainers = { "@amaanq" },
+}
+
+list.caddy = {
+  install_info = {
+    url = "https://github.com/opa-oz/tree-sitter-caddy",
+    files = { "src/parser.c", "src/scanner.c" },
+  },
+  maintainers = { "@opa-oz" },
 }
 
 list.cairo = {
@@ -469,7 +493,7 @@ list.dtd = {
 list.earthfile = {
   install_info = {
     url = "https://github.com/glehmann/tree-sitter-earthfile",
-    files = { "src/parser.c" },
+    files = { "src/parser.c", "src/scanner.c" },
   },
   maintainers = { "@glehmann" },
 }
@@ -547,6 +571,14 @@ list.embedded_template = {
     files = { "src/parser.c" },
   },
   filetype = "eruby",
+}
+
+list.enforce = {
+  install_info = {
+    url = "https://github.com/simonvic/tree-sitter-enforce",
+    files = { "src/parser.c" },
+  },
+  maintainers = { "@simonvic" },
 }
 
 list.erlang = {
@@ -1051,6 +1083,15 @@ list.idl = {
   maintainers = { "@cathaysia" },
 }
 
+list.idris = {
+  install_info = {
+    url = "https://github.com/kayhide/tree-sitter-idris",
+    files = { "src/parser.c", "src/scanner.c" },
+  },
+  filetype = "idris2",
+  maintainers = { "@srghma" },
+}
+
 list.ini = {
   install_info = {
     url = "https://github.com/justinmk/tree-sitter-ini",
@@ -1066,6 +1107,14 @@ list.inko = {
     files = { "src/parser.c" },
   },
   maintainers = { "@yorickpeterse" },
+}
+
+list.ipkg = {
+  install_info = {
+    url = "https://github.com/srghma/tree-sitter-ipkg",
+    files = { "src/parser.c", "src/scanner.c" },
+  },
+  maintainers = { "@srghma" },
 }
 
 list.ispc = {
@@ -1094,12 +1143,38 @@ list.java = {
   maintainers = { "@p00f" },
 }
 
+list.javadoc = {
+  install_info = {
+    url = "https://github.com/rmuir/tree-sitter-javadoc",
+    files = { "src/parser.c", "src/scanner.c" },
+  },
+  maintainers = { "@rmuir" },
+}
+
 list.javascript = {
   install_info = {
     url = "https://github.com/tree-sitter/tree-sitter-javascript",
     files = { "src/parser.c", "src/scanner.c" },
   },
   maintainers = { "@steelsojka" },
+}
+
+list.jinja = {
+  install_info = {
+    url = "https://github.com/cathaysia/tree-sitter-jinja",
+    location = "tree-sitter-jinja",
+    files = { "src/parser.c", "src/scanner.c" },
+  },
+  maintainers = { "@cathaysia" },
+}
+
+list.jinja_inline = {
+  install_info = {
+    url = "https://github.com/cathaysia/tree-sitter-jinja",
+    location = "tree-sitter-jinja_inline",
+    files = { "src/parser.c", "src/scanner.c" },
+  },
+  maintainers = { "@cathaysia" },
 }
 
 list.jq = {
@@ -1166,6 +1241,14 @@ list.just = {
     files = { "src/parser.c", "src/scanner.c" },
   },
   maintainers = { "@Hubro" },
+}
+
+list.kcl = {
+  install_info = {
+    url = "https://github.com/kcl-lang/tree-sitter-kcl",
+    files = { "src/parser.c", "src/scanner.c" },
+  },
+  maintainers = { "@bertbaron" },
 }
 
 list.kconfig = {
@@ -1538,13 +1621,6 @@ list.odin = {
   maintainers = { "@amaanq" },
 }
 
-list.org = {
-  install_info = {
-    url = "https://github.com/milisims/tree-sitter-org",
-    files = { "src/parser.c", "src/scanner.c" },
-  },
-}
-
 list.pascal = {
   install_info = {
     url = "https://github.com/Isopod/tree-sitter-pascal",
@@ -1844,6 +1920,15 @@ list.rasi = {
   maintainers = { "@Fymyte" },
 }
 
+list.razor = {
+  install_info = {
+    url = "https://github.com/tris203/tree-sitter-razor",
+    files = { "src/parser.c", "src/scanner.c" },
+    generate_requires_npm = true,
+  },
+  maintainers = { "@tris203" },
+}
+
 list.rbs = {
   install_info = {
     url = "https://github.com/joker1007/tree-sitter-rbs",
@@ -2023,6 +2108,14 @@ list.slang = {
   filetype = "shaderslang",
   maintainers = { "@theHamsta" },
   experimental = true,
+}
+
+list.slim = {
+  install_info = {
+    url = "https://github.com/theoo/tree-sitter-slim",
+    files = { "src/parser.c", "src/scanner.c" },
+  },
+  maintainers = { "@theoo" },
 }
 
 list.slint = {
@@ -2262,6 +2355,14 @@ list.tcl = {
     files = { "src/parser.c", "src/scanner.c" },
   },
   maintainers = { "@lewis6991" },
+}
+
+list.tera = {
+  install_info = {
+    url = "https://github.com/uncenter/tree-sitter-tera",
+    files = { "src/parser.c", "src/scanner.c" },
+  },
+  maintainers = { "@uncenter" },
 }
 
 list.terraform = {

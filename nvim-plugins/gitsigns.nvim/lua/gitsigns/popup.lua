@@ -1,3 +1,5 @@
+local util = require('gitsigns.util')
+
 local api = vim.api
 
 local M = {}
@@ -23,7 +25,7 @@ end
 -- Expand height until all lines are visible to account for wrapped lines.
 --- @param winid integer
 --- @param nlines integer
---- @param border string
+--- @param border any
 local function expand_height(winid, nlines, border)
   local newheight = 0
   local maxheight = vim.o.lines - vim.o.cmdheight - (border ~= '' and 2 or 0)
@@ -51,19 +53,19 @@ end
 
 --- @class (exact) Gitsigns.HlMark
 --- @field hl_group string
---- @field start_row? integer
+--- @field start_row integer
 --- @field start_col? integer
 --- @field end_row? integer
 --- @field end_col? integer
 
 --- Each element represents a multi-line segment
---- @alias Gitsigns.LineSpec { [1]: string, [2]: Gitsigns.HlMark[]}[][]
+--- @alias Gitsigns.LineSpec [string, string|Gitsigns.HlMark[]][][]
 
 --- @param hlmarks Gitsigns.HlMark[]
 --- @param row_offset integer
 local function offset_hlmarks(hlmarks, row_offset)
   for _, h in ipairs(hlmarks) do
-    h.start_row = (h.start_row or 0) + row_offset
+    h.start_row = h.start_row + row_offset
     if h.end_row then
       h.end_row = h.end_row + row_offset
     end
@@ -143,7 +145,9 @@ local ns = api.nvim_create_namespace('gitsigns_popup')
 local function create_buf(lines, highlights)
   local ts = vim.bo.tabstop
   local bufnr = api.nvim_create_buf(false, true)
-  assert(bufnr, 'Failed to create buffer')
+  assert(bufnr ~= 0, 'Failed to create buffer')
+
+  vim.bo[bufnr].bufhidden = 'wipe'
 
   -- In case nvim was opened with '-M'
   vim.bo[bufnr].modifiable = true
@@ -170,7 +174,7 @@ local function create_buf(lines, highlights)
 end
 
 --- @param bufnr integer
---- @param opts table
+--- @param opts vim.api.keyset.win_config
 --- @param id? string|true
 --- @return integer winid
 local function create_win(bufnr, opts, id)
@@ -248,8 +252,8 @@ local function create_win(bufnr, opts, id)
   return winid
 end
 
---- @param lines_spec {[1]: string, [2]: string|Gitsigns.HlMark[]}[][]
---- @param opts table
+--- @param lines_spec Gitsigns.LineSpec
+--- @param opts vim.api.keyset.win_config
 --- @param id? string
 --- @return integer winid, integer bufnr
 function M.create(lines_spec, opts, id)
@@ -277,6 +281,21 @@ function M.focus_open(id)
     api.nvim_set_current_win(winid)
   end
   return winid
+end
+
+--- @param fmt Gitsigns.LineSpec
+--- @param info table
+--- @return Gitsigns.LineSpec
+function M.lines_format(fmt, info)
+  local ret = vim.deepcopy(fmt)
+
+  for _, line in ipairs(ret) do
+    for _, s in ipairs(line) do
+      s[1] = util.expand_format(s[1], info)
+    end
+  end
+
+  return ret
 end
 
 return M

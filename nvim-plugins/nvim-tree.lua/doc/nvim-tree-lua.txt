@@ -800,22 +800,22 @@ Width of the window: can be a `%` string, a number representing columns, a
 function or a table.
 A table indicates that the view should be dynamically sized based on the
 longest line.
-  Type: `string | number | table | function()` returning a number
+  Type: `string | number | table | fun(): number|string`
   Default: `30`
 
     *nvim-tree.view.width.min*
     Minimum dynamic width.
-      Type: `string | number | function()` returning a number
+      Type: `string | number | fun(): number|string`
       Default: `30`
 
     *nvim-tree.view.width.max*
     Maximum dynamic width, -1 for unbounded.
-      Type: `string | number | function()` returning a number
+      Type: `string | number | fun(): number|string`
       Default: `-1`
 
     *nvim-tree.view.width.padding*
     Extra padding to the right.
-      Type: `number | function()` returning a number
+      Type: `number | fun(): number|string`
       Default: `1`
 
 *nvim-tree.view.float*
@@ -1894,7 +1894,7 @@ tree.winid({opts})                              *nvim-tree-api.tree.winid()*
       • {opts} (table) optional parameters
 
     Options: ~
-      • {tabpage}        (number|nil)  tabpage, 0 or nil for current, default nil
+      • {tabpage} (number|nil)  tabpage, 0 or nil for current, default nil
 
     Return: ~
       (number) winid or nil if tree is not visible
@@ -2007,10 +2007,18 @@ fs.print_clipboard()                      *nvim-tree-api.fs.print_clipboard()*
 Parameters: ~
   • {node} (Node|nil) file or folder
 
-node.open.edit({node})                        *nvim-tree-api.node.open.edit()*
+node.open.edit({node}, {opts})                        *nvim-tree-api.node.open.edit()*
     File:   open as per |nvim-tree.actions.open_file|
     Folder: expand or collapse
     Root:   change directory up
+
+    Parameters: ~
+      • {node} (Node|nil) file or folder
+      • {opts} (table) optional parameters
+
+    Options: ~
+      • {quit_on_open} (boolean) quits the tree when opening the file
+      • {focus} (boolean) keep focus in the tree when opening the file
 
                                *nvim-tree-api.node.open.replace_tree_buffer()*
 node.open.replace_tree_buffer({node})
@@ -2018,21 +2026,79 @@ node.open.replace_tree_buffer({node})
     nvim-tree window.
 
                                   *nvim-tree-api.node.open.no_window_picker()*
-node.open.no_window_picker({node})
+node.open.no_window_picker({node}, {opts})
     |nvim-tree-api.node.edit()|, window picker will never be used as per
     |nvim-tree.actions.open_file.window_picker.enable| `false`
 
-node.open.vertical({node})                *nvim-tree-api.node.open.vertical()*
+    Parameters: ~
+      • {node} (Node|nil) file or folder
+      • {opts} (table) optional parameters
+
+    Options: ~
+      • {quit_on_open} (boolean) quits the tree when opening the file
+      • {focus} (boolean) keep focus in the tree when opening the file
+
+node.open.vertical({node}, {opts})                *nvim-tree-api.node.open.vertical()*
     |nvim-tree-api.node.edit()|, file will be opened in a new vertical split.
 
-node.open.horizontal({node})            *nvim-tree-api.node.open.horizontal()*
+    Parameters: ~
+      • {node} (Node|nil) file or folder
+      • {opts} (table) optional parameters
+
+    Options: ~
+      • {quit_on_open} (boolean) quits the tree when opening the file
+      • {focus} (boolean) keep focus in the tree when opening the file
+
+                                *nvim-tree-api.node.open.vertical_no_picker()*
+node.open.vertical_no_picker({node}, {opts})
+    |nvim-tree-api.node.vertical()|, window picker will never be used as per
+    |nvim-tree.actions.open_file.window_picker.enable| `false`
+
+    Parameters: ~
+      • {node} (Node|nil) file or folder
+      • {opts} (table) optional parameters
+
+    Options: ~
+      • {quit_on_open} (boolean) quits the tree when opening the file
+      • {focus} (boolean) keep focus in the tree when opening the file
+
+node.open.horizontal({node}, {opts})            *nvim-tree-api.node.open.horizontal()*
     |nvim-tree-api.node.edit()|, file will be opened in a new horizontal split.
 
+    Parameters: ~
+      • {node} (Node|nil) file or folder
+      • {opts} (table) optional parameters
+
+    Options: ~
+      • {quit_on_open} (boolean) quits the tree when opening the file
+      • {focus} (boolean) keep focus in the tree when opening the file
+
+                              *nvim-tree-api.node.open.horizontal_no_picker()*
+node.open.horizontal_no_picker({node}, {opts})
+    |nvim-tree-api.node.horizontal()|, window picker will never be used as per
+    |nvim-tree.actions.open_file.window_picker.enable| `false`
+
+    Parameters: ~
+      • {node} (Node|nil) file or folder
+      • {opts} (table) optional parameters
+
+    Options: ~
+      • {quit_on_open} (boolean) quits the tree when opening the file
+      • {focus} (boolean) keep focus in the tree when opening the file
+
                                 *nvim-tree-api.node.open.toggle_group_empty()*
-node.open.toggle_group_empty({node})
+node.open.toggle_group_empty({node}, {opts})
     Toggle |nvim-tree.renderer.group_empty| for a specific folder.
     Does nothing on files.
     Needs |nvim-tree.renderer.group_empty| set.
+
+    Parameters: ~
+      • {node} (Node|nil) file or folder
+      • {opts} (table) optional parameters
+
+    Options: ~
+      • {quit_on_open} (boolean) quits the tree when opening the file
+      • {focus} (boolean) keep focus in the tree when opening the file
 
 node.open.drop({node})                        *nvim-tree-api.node.open.drop()*
     Switch to window with selected file if it exists.
@@ -2043,8 +2109,16 @@ node.open.drop({node})                        *nvim-tree-api.node.open.drop()*
     Folder: expand or collapse
     Root:   change directory up
 
-node.open.tab({node})                          *nvim-tree-api.node.open.tab()*
+node.open.tab({node}, {opts})                          *nvim-tree-api.node.open.tab()*
     |nvim-tree-api.node.edit()|, file will be opened in a new tab.
+
+    Parameters: ~
+      • {node} (Node|nil) file or folder
+      • {opts} (table) optional parameters
+
+    Options: ~
+      • {quit_on_open} (boolean) quits the tree when opening the file
+      • {focus} (boolean) keep focus in the tree when opening the file
 
                                           *nvim-tree-api.node.open.tab_drop()*
 node.open.tab_drop({node})
@@ -2055,14 +2129,30 @@ node.open.tab_drop({node})
     Folder: expand or collapse
     Root:   change directory up
 
-node.open.preview({node})                  *nvim-tree-api.node.open.preview()*
+node.open.preview({node}, {opts})                  *nvim-tree-api.node.open.preview()*
     |nvim-tree-api.node.edit()|, file buffer will have |bufhidden| set to `delete`.
 
+    Parameters: ~
+      • {node} (Node|nil) file or folder
+      • {opts} (table) optional parameters
+
+    Options: ~
+      • {quit_on_open} (boolean) quits the tree when opening the file
+      • {focus} (boolean) keep focus in the tree when opening the file
+
                                  *nvim-tree-api.node.open.preview_no_picker()*
-node.open.preview_no_picker({node})
+node.open.preview_no_picker({node}, {opts})
     |nvim-tree-api.node.edit()|, file buffer will have |bufhidden| set to `delete`.
     window picker will never be used as per
     |nvim-tree.actions.open_file.window_picker.enable| `false`
+
+    Parameters: ~
+      • {node} (Node|nil) file or folder
+      • {opts} (table) optional parameters
+
+    Options: ~
+      • {quit_on_open} (boolean) quits the tree when opening the file
+      • {focus} (boolean) keep focus in the tree when opening the file
 
 node.navigate.git.next({node})        *nvim-tree-api.node.navigate.git.next()*
     Navigate to the next item showing git status.
@@ -2153,6 +2243,28 @@ node.run.cmd({node})                            *nvim-tree-api.node.run.cmd()*
 
 node.run.system({node})                      *nvim-tree-api.node.run.system()*
     Execute |nvim-tree.system_open|
+
+node.buffer.delete({node}, {opts})        *nvim-tree-api.node.buffer.delete()*
+    Deletes node's related buffer, if one exists.
+    Executes |:bdelete| or |:bdelete|!
+
+    Parameters: ~
+      • {node} (Node|nil) file or folder
+      • {opts} (table) optional parameters
+
+    Options: ~
+      • {force} (boolean) delete even if buffer is modified, default false
+
+node.buffer.wipe({node}, {opts})            *nvim-tree-api.node.buffer.wipe()*
+    Wipes node's related buffer, if one exists.
+    Executes |:bwipe| or |:bwipe|!
+
+    Parameters: ~
+      • {node} (Node|nil) file or folder
+      • {opts} (table) optional parameters
+
+    Options: ~
+      • {force} (boolean) wipe even if buffer is modified, default false
 
 ==============================================================================
  6.4 API GIT                                               *nvim-tree-api.git*
@@ -2657,13 +2769,21 @@ e.g. handler for node renamed: >lua
 |nvim_tree_events_kind|
 
 - Event.Ready
-                When NvimTree has been initialized
+                When NvimTree has been initialized.
+                • Note: Handler takes no parameter.
+
+- Event.TreePreOpen
+                Invoked before the window and buffer for NvimTree are created
+                or opened. Before |Event.TreeOpen| event.
                 • Note: Handler takes no parameter.
 
 - Event.TreeOpen
+                Invoked after the NvimTree is opened.
                 • Note: Handler takes no parameter.
 
 - Event.TreeClose
+                Invoked after the NvimTree is closed, but before the window is
+                closed. Dispatched on |WinClosed| event for NvimTree window.
                 • Note: Handler takes no parameter.
 
 - Event.Resize - When NvimTree is resized.
@@ -3168,6 +3288,8 @@ highlight group is not, hard linking as follows: >
 |nvim-tree-api.marks.navigate.prev()|
 |nvim-tree-api.marks.navigate.select()|
 |nvim-tree-api.marks.toggle()|
+|nvim-tree-api.node.buffer.delete()|
+|nvim-tree-api.node.buffer.wipe()|
 |nvim-tree-api.node.navigate.diagnostics.next()|
 |nvim-tree-api.node.navigate.diagnostics.next_recursive()|
 |nvim-tree-api.node.navigate.diagnostics.prev()|
@@ -3189,6 +3311,7 @@ highlight group is not, hard linking as follows: >
 |nvim-tree-api.node.open.drop()|
 |nvim-tree-api.node.open.edit()|
 |nvim-tree-api.node.open.horizontal()|
+|nvim-tree-api.node.open.horizontal_no_picker()|
 |nvim-tree-api.node.open.no_window_picker()|
 |nvim-tree-api.node.open.preview()|
 |nvim-tree-api.node.open.preview_no_picker()|
@@ -3197,6 +3320,7 @@ highlight group is not, hard linking as follows: >
 |nvim-tree-api.node.open.tab_drop()|
 |nvim-tree-api.node.open.toggle_group_empty()|
 |nvim-tree-api.node.open.vertical()|
+|nvim-tree-api.node.open.vertical_no_picker()|
 |nvim-tree-api.node.run.cmd()|
 |nvim-tree-api.node.run.system()|
 |nvim-tree-api.node.show_info_popup()|

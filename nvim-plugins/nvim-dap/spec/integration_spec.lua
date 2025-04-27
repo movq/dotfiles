@@ -24,6 +24,23 @@ describe('dap with fake server', function()
     require('dap.breakpoints').clear()
     wait(function() return dap.session() == nil end)
   end)
+
+  it("handler is called without response if there is an error", function()
+    local session = run_and_wait_until_initialized(config, server)
+    server.client.threads = function(self, request)
+      self:send_err_response(request, "this is wrong", "err1")
+    end
+
+    local err, resp
+    session:request("threads", nil, function (e, r)
+      err = e
+      resp = r
+    end)
+    wait(function() return err ~= nil end)
+    assert.is_nil(resp)
+    assert.are.same(tostring(err), "this is wrong")
+  end)
+
   it('clear breakpoints clears all active breakpoints', function()
     local session = run_and_wait_until_initialized(config, server)
     assert.are_not.same(session, nil)
@@ -335,9 +352,9 @@ describe('dap with fake server', function()
     local log = require('dap.log').create_logger('dap.log')
     local debug = log.debug
     local messages = {}
-    log.debug = function(...)
+    log.debug = function(self, ...)
       table.insert(messages, {...})
-      debug(...)
+      debug(self, ...)
     end
     server.client:send_event('stopped', {
       threadId = 1,
@@ -1200,7 +1217,7 @@ describe("bad debug adapter", function()
     }
     dap.run(bad_config)
     wait(function() return captured_msg ~= nil end)
-    assert.are.same("python exited with code: 10", captured_msg)
+    assert.are.same("command `python` of adapter `bad` exited with 10. Run :DapShowLog to open logs", captured_msg)
     assert.are.same(vim.log.levels.WARN, captured_log_level)
   end)
 end)

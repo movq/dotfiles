@@ -101,10 +101,19 @@ function Explorer:create_autocmds()
   vim.api.nvim_create_autocmd("BufReadPost", {
     group = self.augroup_id,
     callback = function(data)
-      if (self.filters.state.no_buffer or self.opts.highlight_opened_files ~= "none") and vim.bo[data.buf].buftype == "" then
+      -- only handle normal files
+      if vim.bo[data.buf].buftype ~= "" then
+        return
+      end
+
+      if self.filters.state.no_buffer then
+        -- full reload is required to update the filter state
         utils.debounce("Buf:filter_buffer_" .. self.uid_explorer, self.opts.view.debounce_delay, function()
           self:reload_explorer()
         end)
+      elseif self.opts.renderer.highlight_opened_files ~= "none" then
+        -- draw to update opened highlight
+        self.renderer:draw()
       end
     end,
   })
@@ -113,9 +122,20 @@ function Explorer:create_autocmds()
   vim.api.nvim_create_autocmd("BufUnload", {
     group = self.augroup_id,
     callback = function(data)
-      if (self.filters.state.no_buffer or self.opts.highlight_opened_files ~= "none") and vim.bo[data.buf].buftype == "" then
+      -- only handle normal files
+      if vim.bo[data.buf].buftype ~= "" then
+        return
+      end
+
+      if self.filters.state.no_buffer then
+        -- full reload is required to update the filter state
         utils.debounce("Buf:filter_buffer_" .. self.uid_explorer, self.opts.view.debounce_delay, function()
           self:reload_explorer()
+        end)
+      elseif self.opts.renderer.highlight_opened_files ~= "none" then
+        -- draw to update opened highlight; must be delayed as the buffer is still loaded during BufUnload
+        vim.schedule(function()
+          self.renderer:draw()
         end)
       end
     end,
@@ -214,8 +234,9 @@ function Explorer:reload(node, project)
     end
 
     local abs = utils.path_join({ cwd, name })
-    ---@type uv.fs_stat.result|nil
-    local stat = vim.loop.fs_lstat(abs)
+
+    -- path incorrectly specified as an integer
+    local stat = vim.loop.fs_lstat(abs) ---@diagnostic disable-line param-type-mismatch
 
     local filter_reason = self.filters:should_filter_as_reason(abs, stat, filter_status)
     if filter_reason == FILTER_REASON.none then
@@ -373,8 +394,9 @@ function Explorer:populate_children(handle, cwd, node, project, parent)
     if Watcher.is_fs_event_capable(abs) then
       local profile = log.profile_start("populate_children %s", abs)
 
-      ---@type uv.fs_stat.result|nil
-      local stat = vim.loop.fs_lstat(abs)
+      -- path incorrectly specified as an integer
+      local stat = vim.loop.fs_lstat(abs) ---@diagnostic disable-line param-type-mismatch
+
       local filter_reason = parent.filters:should_filter_as_reason(abs, stat, filter_status)
       if filter_reason == FILTER_REASON.none and not nodes_by_path[abs] then
         local child = node_factory.create({
@@ -389,9 +411,9 @@ function Explorer:populate_children(handle, cwd, node, project, parent)
           nodes_by_path[child.absolute_path] = true
           child:update_git_status(node_ignored, project)
         end
-      else
+      elseif node.hidden_stats then
         for reason, value in pairs(FILTER_REASON) do
-          if filter_reason == value then
+          if filter_reason == value and type(node.hidden_stats[reason]) == "number" then
             node.hidden_stats[reason] = node.hidden_stats[reason] + 1
           end
         end

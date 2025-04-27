@@ -1,9 +1,12 @@
 name: test
-
 on:
   pull_request:
     branches:
       - master
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test:
@@ -12,7 +15,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
-        nvim_version: [nightly, 'v0.9.5']
+        nvim_version: [nightly, 'v0.10.4']
     steps:
       - uses: actions/checkout@v4
       - uses: rhysd/action-setup-vim@v1
@@ -20,10 +23,10 @@ jobs:
           neovim: true
           version: ${{ matrix.nvim_version }}
 
-      - uses: leafo/gh-actions-lua@v10
+      - uses: leafo/gh-actions-lua@v11
         with:
           luaVersion: "luajit-openresty"
-      - uses: leafo/gh-actions-luarocks@v4
+      - uses: leafo/gh-actions-luarocks@v5
 
       - name: Install vusted
         run: luarocks install vusted

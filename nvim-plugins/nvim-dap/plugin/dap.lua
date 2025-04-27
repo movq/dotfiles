@@ -5,8 +5,9 @@ end
 
 local cmd = api.nvim_create_user_command
 cmd('DapSetLogLevel',
+  ---@param opts vim.api.keyset.create_user_command.command_args
   function(opts)
-    require('dap').set_log_level(unpack(opts.fargs))
+    require('dap').set_log_level(vim.trim(opts.args))
   end,
   {
     nargs = 1,
@@ -15,13 +16,15 @@ cmd('DapSetLogLevel',
     end
   }
 )
-cmd('DapShowLog', 'split | e ' .. vim.fn.stdpath('cache') .. '/dap.log | normal! G', {})
+cmd('DapShowLog', function() require("dap._cmds").show_logs() end, { nargs = 0 })
 cmd('DapContinue', function() require('dap').continue() end, { nargs = 0 })
 cmd('DapToggleBreakpoint', function() require('dap').toggle_breakpoint() end, { nargs = 0 })
+cmd('DapClearBreakpoints', function() require('dap').clear_breakpoints() end, { nargs = 0 })
 cmd('DapToggleRepl', function() require('dap.repl').toggle() end, { nargs = 0 })
 cmd('DapStepOver', function() require('dap').step_over() end, { nargs = 0 })
 cmd('DapStepInto', function() require('dap').step_into() end, { nargs = 0 })
 cmd('DapStepOut', function() require('dap').step_out() end, { nargs = 0 })
+cmd('DapPause', function () require('dap').pause() end, { nargs = 0 })
 cmd('DapTerminate', function() require('dap').terminate() end, { nargs = 0 })
 cmd('DapDisconnect', function() require('dap').disconnect({ terminateDebuggee = false }) end, { nargs = 0 })
 cmd('DapRestartFrame', function() require('dap').restart_frame() end, { nargs = 0 })

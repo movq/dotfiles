@@ -1,27 +1,39 @@
 local config = require("codecompanion.config")
 local curl = require("plenary.curl")
 local log = require("codecompanion.utils.log")
-local utils = require("codecompanion.utils.adapters")
+local openai = require("codecompanion.adapters.openai")
+
+local _cached_adapter
 
 ---Get a list of available Ollama models
 ---@params self CodeCompanion.Adapter
 ---@params opts? table
 ---@return table
 local function get_models(self, opts)
-  local adapter = require("codecompanion.adapters").resolve(self)
-  if not adapter then
-    log:error("Could not resolve Ollama adapter in the `get_models` function")
-    return {}
+  -- Prevent the adapter from being resolved multiple times due to `get_models`
+  -- having both `default` and `choices` functions
+  if not _cached_adapter then
+    local adapter = require("codecompanion.adapters").resolve(self)
+    if not adapter then
+      log:error("Could not resolve Ollama adapter in the `get_models` function")
+      return {}
+    end
+    _cached_adapter = adapter
   end
 
-  adapter:get_env_vars()
-  local url = adapter.env_replaced.url
+  _cached_adapter:get_env_vars()
+  local url = _cached_adapter.env_replaced.url
 
   local headers = {
     ["content-type"] = "application/json",
   }
-  if adapter.env_replaced.api_key then
-    headers["Authorization"] = "Bearer " .. adapter.env_replaced.api_key
+
+  local auth_header = "Bearer "
+  if _cached_adapter.env_replaced.authorization then
+    auth_header = _cached_adapter.env_replaced.authorization .. " "
+  end
+  if _cached_adapter.env_replaced.api_key then
+    headers["Authorization"] = auth_header .. _cached_adapter.env_replaced.api_key
   end
 
   local ok, response = pcall(function()
@@ -63,119 +75,43 @@ return {
     user = "user",
   },
   opts = {
-    stream = true, -- NOTE: Currently, CodeCompanion ONLY supports streaming with this adapter
+    stream = true,
   },
   features = {
     text = true,
     tokens = true,
     vision = false,
   },
-  url = "${url}/api/chat",
+  url = "${url}/v1/chat/completions",
   env = {
     url = "http://localhost:11434",
   },
   handlers = {
-    ---Set the parameters
-    ---@param self CodeCompanion.Adapter
-    ---@param params table
-    ---@param messages table
-    ---@return table
-    form_parameters = function(self, params, messages)
-      return params
+    --- Use the OpenAI adapter for the bulk of the work
+    setup = function(self)
+      return openai.handlers.setup(self)
     end,
-
-    ---Set the format of the role and content for the messages from the chat buffer
-    ---@param self CodeCompanion.Adapter
-    ---@param messages table Format is: { { role = "user", content = "Your prompt here" } }
-    ---@return table
-    form_messages = function(self, messages)
-      messages = utils.merge_messages(messages)
-      return { messages = messages }
-    end,
-
-    ---Returns the number of tokens generated from the LLM
-    ---@param self CodeCompanion.Adapter
-    ---@param data table The data from the LLM
-    ---@return number|nil
     tokens = function(self, data)
-      if data then
-        local ok, json = pcall(vim.json.decode, data, { luanil = { object = true } })
-
-        if not ok then
-          return
-        end
-
-        if json.eval_count then
-          log:debug("Done! %s", json.eval_count)
-          return json.eval_count
-        end
-      end
+      return openai.handlers.tokens(self, data)
     end,
-
-    ---Output the data from the API ready for insertion into the chat buffer
-    ---@param self CodeCompanion.Adapter
-    ---@param data table The streamed JSON data from the API, also formatted by the format_data callback
-    ---@return table|nil
+    form_parameters = function(self, params, messages)
+      return openai.handlers.form_parameters(self, params, messages)
+    end,
+    form_messages = function(self, messages)
+      return openai.handlers.form_messages(self, messages)
+    end,
     chat_output = function(self, data)
-      local output = {}
-
-      if data and data ~= "" then
-        local ok, json = pcall(vim.json.decode, data, { luanil = { object = true } })
-
-        if not ok then
-          return {
-            status = "error",
-            output = string.format("Error malformed json: %s", json),
-          }
-        end
-
-        local message = json.message
-
-        if message.content then
-          output.content = message.content
-          output.role = message.role or nil
-        end
-
-        -- log:trace("----- For Adapter test creation -----\nOutput: %s\n ---------- // END ----------", output)
-
-        return {
-          status = "success",
-          output = output,
-        }
-      end
-
-      return nil
+      return openai.handlers.chat_output(self, data)
     end,
-
-    ---Output the data from the API ready for inlining into the current buffer
-    ---@param self CodeCompanion.Adapter
-    ---@param data table The streamed JSON data from the API, also formatted by the format_data handler
-    ---@param context table Useful context about the buffer to inline to
-    ---@return table|nil
     inline_output = function(self, data, context)
-      if data and data ~= "" then
-        local ok, json = pcall(vim.json.decode, data, { luanil = { object = true } })
-
-        if not ok then
-          log:error("Error malformed json: %s", json)
-          return
-        end
-
-        return json.message.content
-      end
+      return openai.handlers.inline_output(self, data, context)
     end,
-
-    ---Function to run when the request has completed. Useful to catch errors
-    ---@param self CodeCompanion.Adapter
-    ---@param data table
-    ---@return nil
     on_exit = function(self, data)
-      if data.status >= 400 then
-        log:error("Error: %s", data.body)
-      end
+      return openai.handlers.on_exit(self, data)
     end,
   },
   schema = {
+    ---@type CodeCompanion.Schema
     model = {
       order = 1,
       mapping = "parameters",
@@ -188,6 +124,7 @@ return {
         return get_models(self)
       end,
     },
+    ---@type CodeCompanion.Schema
     temperature = {
       order = 2,
       mapping = "parameters.options",
@@ -199,6 +136,7 @@ return {
         return n >= 0 and n <= 2, "Must be between 0 and 2"
       end,
     },
+    ---@type CodeCompanion.Schema
     num_ctx = {
       order = 3,
       mapping = "parameters.options",
@@ -210,6 +148,7 @@ return {
         return n > 0, "Must be a positive number"
       end,
     },
+    ---@type CodeCompanion.Schema
     mirostat = {
       order = 4,
       mapping = "parameters.options",
@@ -221,6 +160,7 @@ return {
         return n == 0 or n == 1 or n == 2, "Must be 0, 1, or 2"
       end,
     },
+    ---@type CodeCompanion.Schema
     mirostat_eta = {
       order = 5,
       mapping = "parameters.options",
@@ -232,6 +172,7 @@ return {
         return n > 0, "Must be a positive number"
       end,
     },
+    ---@type CodeCompanion.Schema
     mirostat_tau = {
       order = 6,
       mapping = "parameters.options",
@@ -243,6 +184,7 @@ return {
         return n > 0, "Must be a positive number"
       end,
     },
+    ---@type CodeCompanion.Schema
     repeat_last_n = {
       order = 7,
       mapping = "parameters.options",
@@ -254,6 +196,7 @@ return {
         return n >= -1, "Must be -1 or greater"
       end,
     },
+    ---@type CodeCompanion.Schema
     repeat_penalty = {
       order = 8,
       mapping = "parameters.options",
@@ -265,6 +208,7 @@ return {
         return n >= 0, "Must be a non-negative number"
       end,
     },
+    ---@type CodeCompanion.Schema
     seed = {
       order = 9,
       mapping = "parameters.options",
@@ -276,6 +220,7 @@ return {
         return n >= 0, "Must be a non-negative number"
       end,
     },
+    ---@type CodeCompanion.Schema
     stop = {
       order = 10,
       mapping = "parameters.options",
@@ -287,17 +232,7 @@ return {
         return s:len() > 0, "Cannot be an empty string"
       end,
     },
-    tfs_z = {
-      order = 11,
-      mapping = "parameters.options",
-      type = "number",
-      optional = true,
-      default = 1.0,
-      desc = "Tail free sampling is used to reduce the impact of less probable tokens from the output. A higher value (e.g., 2.0) will reduce the impact more, while a value of 1.0 disables this setting. (default: 1)",
-      validate = function(n)
-        return n >= 0, "Must be a non-negative number"
-      end,
-    },
+    ---@type CodeCompanion.Schema
     num_predict = {
       order = 12,
       mapping = "parameters.options",
@@ -309,6 +244,7 @@ return {
         return n >= -2, "Must be -2 or greater"
       end,
     },
+    ---@type CodeCompanion.Schema
     top_k = {
       order = 13,
       mapping = "parameters.options",
@@ -320,6 +256,7 @@ return {
         return n >= 0, "Must be a non-negative number"
       end,
     },
+    ---@type CodeCompanion.Schema
     top_p = {
       order = 14,
       mapping = "parameters.options",

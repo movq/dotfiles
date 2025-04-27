@@ -1,10 +1,8 @@
 ---@meta
 
-
 ---@class dap.ProtocolMessage
 ---@field seq number
 ---@field type "request"|"response"|"event"|string
-
 
 ---@class dap.Request: dap.ProtocolMessage
 ---@field type "request"
@@ -28,7 +26,7 @@
 
 
 ---@class dap.ErrorResponse: dap.Response
----@field message string
+---@field message? "cancelled"|"notStopped"|string
 ---@field body {error?: dap.Message}
 
 
@@ -242,6 +240,24 @@
 ---@field supportsExceptionFilterOptions boolean|nil
 ---@field supportsSingleThreadExecutionRequests boolean|nil
 
+---@class dap.InitializeRequestArguments
+---@field clientId? string
+---@field clientName? string
+---@field adapterId string
+---@field locale string
+---@field linesStartAt1? boolean
+---@field columnsStartAt1? boolean
+---@field pathFormat? "path" | "uri" | string
+---@field supportsVariableType? boolean
+---@field supportsVariablePaging? boolean
+---@field supportsRunInTerminalRequest? boolean
+---@field supportsMemoryReferences? boolean
+---@field supportsProgressReporting? boolean
+---@field supportsInvalidatedEvent? boolean
+---@field supportsMemoryEvent? boolean
+---@field supportsArgsCanBeInterpretedByShell? boolean
+---@field supportsStartDebuggingRequest? boolean
+---@field supportsANSIStyling? boolean
 
 ---@class dap.ExceptionBreakpointsFilter
 ---@field filter string
@@ -297,6 +313,7 @@
 ---@field instructionReference? string
 ---@field offset? number
 
+---@class dap.InitializedEvent
 
 ---@class dap.StoppedEvent
 ---@field reason "step"|"breakpoint"|"exception"|"pause"|"entry"|"goto"|"function breakpoint"|"data breakpoint"|"instruction breakpoint"|string;

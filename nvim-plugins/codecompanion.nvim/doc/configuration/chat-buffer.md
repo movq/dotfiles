@@ -42,9 +42,9 @@ require("codecompanion").setup({
     chat = {
       variables = {
         ["my_var"] = {
-          callback = function()
-            return "Your custom content here."
-          end,
+          ---Ensure the file matches the CodeCompanion.Variable class
+          ---@return string|fun(): nil
+          callback = "/Users/Oli/Code/my_var.lua",
           description = "Explain what my_var does",
           opts = {
             contains_code = false,
@@ -60,7 +60,7 @@ require("codecompanion").setup({
 
 Slash Commands (invoked with `/`) let you dynamically insert context into the chat buffer, such as file contents or date/time.
 
-The plugin supports providers like `telescope`, `mini_pick`, `fzf_lua` and `snacks` (as in snacks.nvim). Please see the [Chat Buffer](/usage/chat-buffer/index) usage section for full details:
+The plugin supports providers like `telescope`, `mini_pick`, `fzf_lua` and `snacks` (as in snacks.nvim). By default, the plugin will automatically detect if you have any of those plugins installed and duly select them. Failing that, the in-build `default` provider will be used. Please see the [Chat Buffer](/usage/chat-buffer/index) usage section for full details:
 
 ```lua
 require("codecompanion").setup({
@@ -68,10 +68,11 @@ require("codecompanion").setup({
     chat = {
       slash_commands = {
         ["file"] = {
+          -- Location to the slash command in CodeCompanion
           callback = "strategies.chat.slash_commands.file",
           description = "Select a file using Telescope",
           opts = {
-            provider = "telescope", -- Other options include 'default', 'mini_pick', 'fzf_lua', snacks
+            provider = "telescope", -- Can be "default", "telescope", "fzf_lua", "mini_pick" or "snacks"
             contains_code = true,
           },
         },
@@ -80,6 +81,7 @@ require("codecompanion").setup({
   },
 })
 ```
+
 
 You can also add your own slash commands:
 
@@ -88,13 +90,21 @@ require("codecompanion").setup({
   strategies = {
     chat = {
       slash_commands = {
-        ["mycmd"] = {
-          description = "Describe what mycmd inserts",
-          callback = function()
-            return "Custom context or data"
+        ["git_files"] = {
+          description = "List git files",
+          ---@param chat CodeCompanion.Chat
+          callback = function(chat)
+            local handle = io.popen("git ls-files")
+            if handle ~= nil then
+              local result = handle:read("*a")
+              handle:close()
+              chat:add_reference({ role = "user", content = result }, "git", "<git_files>")
+            else
+              return vim.notify("No git files available", vim.log.levels.INFO, { title = "CodeCompanion" })
+            end
           end,
           opts = {
-            contains_code = true,
+            contains_code = false,
           },
         },
       },
@@ -103,32 +113,34 @@ require("codecompanion").setup({
 })
 ```
 
+Credit to [@lazymaniac](https://github.com/lazymaniac) for the [inspiration](https://github.com/olimorris/codecompanion.nvim/discussions/958).
+
+> [!NOTE]
+> You can also point the callback to a lua file that resides within your own configuration
+
 ## Agents and Tools
 
-Tools perform specific tasks (e.g., running shell commands, editing buffers, etc.) when invoked by an LLM. You can group them into an Agent and both can be referenced with `@` when in the chat buffer:
+Tools perform specific tasks (e.g., running shell commands, editing buffers, etc.) when invoked by an LLM. Multiple tools can be grouped together. Both can be referenced with `@` when in the chat buffer:
 
 ```lua
 require("codecompanion").setup({
   strategies = {
     chat = {
-      agents = {
-        ["my_agent"] = {
-          description = "A custom agent combining tools",
-          system_prompt = "Describe what the agent should do",
-          tools = {
-            "cmd_runner",
-            "editor",
-            -- Add your own tools or reuse existing ones
-          },
-        },
-      },
       tools = {
         ["my_tool"] = {
           description = "Run a custom task",
-          callback = function(command)
-            -- Perform the custom task here
-            return "Tool result"
-          end,
+          callback = require("user.codecompanion.tools.my_tool")
+        },
+        groups = {
+          ["my_group"] = {
+            description = "A custom agent combining tools",
+            system_prompt = "Describe what the agent should do",
+            tools = {
+              "cmd_runner",
+              "editor",
+              -- Add your own tools or reuse existing ones
+            },
+          },
         },
       },
     },
@@ -137,6 +149,26 @@ require("codecompanion").setup({
 ```
 
 When users introduce the agent `@my_agent` in the chat buffer, it can call the tools you listed (like `@my_tool`) to perform tasks on your code.
+
+A tool is a [`CodeCompanion.Tool`](/extending/tools) table with specific keys that define the interface and workflow of the tool. The table can be resolved using the `callback` option. The `callback` option can be a table itself or either a function or a string that points to a luafile that return the table.
+
+Some tools, such as the [@cmd_runner](/usage/chat-buffer/agents.html#cmd-runner), require the user to approve any commands before they're executed. This can be changed by altering the config for each tool:
+
+```lua
+require("codecompanion").setup({
+  strategies = {
+    chat = {
+      tools = {
+        ["cmd_runner"] = {
+          opts = {
+            requires_approval = false,
+          },
+        },
+      }
+    }
+  }
+})
+```
 
 ## Layout
 
@@ -168,6 +200,7 @@ require("codecompanion").setup({
         height = 0.8,
         width = 0.45,
         relative = "editor",
+        full_height = true, -- when set to false, vsplit will be used to open the chat buffer vs. botright/topleft vsplit
         opts = {
           breakindent = true,
           cursorcolumn = false,
@@ -275,6 +308,21 @@ As the Chat Buffer uses markdown as its syntax, you can use popular rendering pl
 },
 ```
 
+### Auto scrolling
+
+By default, the page scrolls down automatically as the response streams, with the cursor placed at the end.
+This can be distracting if you are focusing on the earlier content while the page scrolls up away during a long response.
+You can disable this behavior using a flag:
+
+```lua
+require("codecompanion").setup({
+  display = {
+    chat = {
+      auto_scroll = false
+    },
+  },
+}),
+```
 ## Additional Options
 
 There are also a number of other options that you can customize:

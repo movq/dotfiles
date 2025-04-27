@@ -6,6 +6,7 @@ local utils = require("neo-tree.utils")
 local filter = require("neo-tree.sources.filesystem.lib.filter")
 local renderer = require("neo-tree.ui.renderer")
 local log = require("neo-tree.log")
+local uv = vim.uv or vim.loop
 
 local M = {}
 local refresh = function(state)
@@ -68,10 +69,11 @@ M.delete_visual = function(state, selected_nodes)
 end
 
 M.expand_all_nodes = function(state, node)
-  if node == nil then
-    node = state.tree:get_node(state.path)
-  end
   cc.expand_all_nodes(state, node, fs.prefetcher)
+end
+
+M.expand_all_subnodes = function(state, node)
+  cc.expand_all_subnodes(state, node, fs.prefetcher)
 end
 
 ---Shows the filter input, which will filter the tree.
@@ -144,7 +146,7 @@ local focus_next_git_modified = function(state, reverse)
   end
 
   local is_file = function(path)
-    local success, stats = pcall(vim.loop.fs_stat, path)
+    local success, stats = pcall(uv.fs_stat, path)
     return (success and stats and stats.type ~= "directory")
   end
 

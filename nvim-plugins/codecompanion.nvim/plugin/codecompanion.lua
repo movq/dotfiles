@@ -7,22 +7,15 @@ if vim.fn.has("nvim-0.10.0") == 0 then
   return vim.notify("CodeCompanion.nvim requires Neovim 0.10.0+", vim.log.levels.ERROR)
 end
 
-local cmds = require("codecompanion.commands")
 local config = require("codecompanion.config")
-
 local api = vim.api
-
--- Create the user commands
-for _, cmd in ipairs(cmds) do
-  api.nvim_create_user_command(cmd.cmd, cmd.callback, cmd.opts)
-end
 
 -- Set the highlight groups
 api.nvim_set_hl(0, "CodeCompanionChatHeader", { link = "@markup.heading.2.markdown", default = true })
 api.nvim_set_hl(0, "CodeCompanionChatSeparator", { link = "@punctuation.special.markdown", default = true })
 api.nvim_set_hl(0, "CodeCompanionChatTokens", { link = "Comment", default = true })
-api.nvim_set_hl(0, "CodeCompanionChatAgent", { link = "Constant", default = true })
 api.nvim_set_hl(0, "CodeCompanionChatTool", { link = "Special", default = true })
+api.nvim_set_hl(0, "CodeCompanionChatToolGroup", { link = "Constant", default = true })
 api.nvim_set_hl(0, "CodeCompanionChatVariable", { link = "Identifier", default = true })
 api.nvim_set_hl(0, "CodeCompanionVirtualText", { link = "Comment", default = true })
 
@@ -36,20 +29,20 @@ api.nvim_create_autocmd("FileType", {
     vim.iter(config.strategies.chat.variables):each(function(name, var)
       vim.cmd.syntax('match CodeCompanionChatVariable "#' .. name .. '"')
       if var.opts and var.opts.has_params then
-        vim.cmd.syntax('match CodeCompanionChatVariable "#' .. name .. ':\\d\\+-\\?\\d\\+"')
+        vim.cmd.syntax('match CodeCompanionChatVariable "#' .. name .. '{[^}]*}"')
       end
     end)
-    vim.iter(config.strategies.chat.agents.tools):each(function(name, _)
-      vim.cmd.syntax('match CodeCompanionChatTool "@' .. name .. '"')
-    end)
     vim
-      .iter(config.strategies.chat.agents)
+      .iter(config.strategies.chat.tools)
       :filter(function(name)
-        return name ~= "tools"
+        return name ~= "groups" and name ~= "opts"
       end)
       :each(function(name, _)
-        vim.cmd.syntax('match CodeCompanionChatAgent "@' .. name .. '"')
+        vim.cmd.syntax('match CodeCompanionChatTool "@' .. name .. '"')
       end)
+    vim.iter(config.strategies.chat.tools.groups):each(function(name, _)
+      vim.cmd.syntax('match CodeCompanionChatToolGroup "@' .. name .. '"')
+    end)
   end),
 })
 
@@ -73,7 +66,8 @@ local has_cmp, cmp = pcall(require, "cmp")
 local has_blink, blink = pcall(require, "blink.cmp")
 if has_blink then
   pcall(function()
-    blink.add_provider("codecompanion", {
+    local add_provider = blink.add_source_provider or blink.add_provider
+    add_provider("codecompanion", {
       name = "CodeCompanion",
       module = "codecompanion.providers.completion.blink",
       enabled = true,

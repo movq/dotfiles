@@ -12,6 +12,8 @@ function Lib.setup(log_level)
   }
 end
 
+local uv = vim.uv or vim.loop
+
 ---Returns the current session name. For an automatically generated session name, it
 ---will just be the same as vim.fn.getcwd(). For a named session, it will be the name
 ---without .vim
@@ -97,6 +99,7 @@ end
 ---Removes the trailing separator (if any) from a directory, for both unix and windows
 ---This is needed in some places to avoid duplicate separators that complicate
 ---the path and make equality checks fail (e.g. session control alternate)
+-- Will return '/' if that's the only part of the path
 ---@param dir string The directory path to make sure doesn't have a trailing separator
 ---@return string Dir guaranteed to not have a trailing separator
 function Lib.remove_trailing_separator(dir)
@@ -105,7 +108,7 @@ function Lib.remove_trailing_separator(dir)
     dir = dir:gsub("\\$", "")
   end
 
-  return (dir:gsub("/$", ""))
+  return (dir:gsub("(.)/$", "%1"))
 end
 
 ---Legacy decoding function for windows. Replaces ++ with : and - with \
@@ -520,7 +523,7 @@ function Lib.find_matching_directory(dirToFind, dirs)
     ---@diagnostic disable-next-line: param-type-mismatch
     for path in string.gmatch(dir, "[^\r\n]+") do
       local simplified_path = vim.fn.simplify(path)
-      local path_without_trailing_slashes = string.gsub(simplified_path, "/+$", "")
+      local path_without_trailing_slashes = string.gsub(simplified_path, "([/~].*)/+$", "%1")
 
       -- Lib.logger.debug("find_matching_directory simplified: " .. simplified_path)
 
@@ -679,6 +682,162 @@ function Lib.get_session_list(sessions_dir)
       path = sessions_dir .. file_name,
     }
   end, entries)
+end
+
+---Get the name of the altnernate session stored in the session control file
+---@return string|nil name of the alternate session, suitable for calls to LoadSession
+function Lib.get_alternate_session_name(session_control_conf)
+  if not session_control_conf then
+    Lib.logger.error "No session_control in config!"
+    return nil
+  end
+
+  local filepath = vim.fn.expand(session_control_conf.control_dir) .. session_control_conf.control_filename
+
+  if vim.fn.filereadable(filepath) == 0 then
+    return nil
+  end
+
+  local json = Lib.load_session_control_file(filepath)
+
+  local sessions = {
+    current = json.current,
+    alternate = json.alternate,
+  }
+
+  Lib.logger.debug("get_alternate_session_name", { sessions = sessions, json = json })
+
+  if sessions.current == sessions.alternate then
+    Lib.logger.info "Current session is the same as alternate, returning nil"
+    return nil
+  end
+  local file_name = vim.fn.fnamemodify(sessions.alternate, ":t")
+  if Lib.is_legacy_file_name(file_name) then
+    return (Lib.legacy_unescape_session_name(file_name):gsub("%.vim$", ""))
+  end
+  return Lib.escaped_session_name_to_session_name(file_name)
+end
+
+---Returns git branch name, if any, for the path (if passed in) or the cwd
+---@param path string? Optional path to use when checking for git branch
+---@return string # Name of git branch or empty string
+function Lib.get_git_branch_name(path)
+  local git_cmd = string.format("git%s rev-parse --abbrev-ref HEAD", path and (" -C " .. path) or "")
+
+  local out = vim.fn.systemlist(git_cmd)
+  if vim.v.shell_error ~= 0 then
+    Lib.logger.debug(string.format("git failed with: %s", table.concat(out, "\n")))
+    return ""
+  end
+  return out[1]
+end
+
+---Adds the git branch name to the passwed in session name
+---@param session_name string session name to add the git branch to
+---@param git_branch_name string? git branch name to use
+---@param legacy boolean? whether to use current or legacy naming convention
+---@return string # Session name with the git branch name added on (if there is one)
+function Lib.combine_session_name_with_git_branch(session_name, git_branch_name, legacy)
+  legacy = legacy or false
+
+  if not git_branch_name or git_branch_name == "" then
+    return session_name
+  end
+
+  -- NOTE: By including it in the session name, there's the possibility of a collision
+  -- with an actual directory named session_name|branch_name. Meaning, that if someone
+  -- created a session in session_name (while branch_name is checked out) and then also
+  -- went to edit in a directory literally called session_name|branch_name. the sessions
+  -- would collide. Obviously, that's not perfect but I think it's an ok price to pay to
+  -- get branch specific sessions and still have a cwd derived text key to identify sessions
+  -- that can be used everywhere, incuding :SessionRestore
+  if legacy then
+    return session_name .. "_" .. git_branch_name
+  end
+
+  -- now that we're percent encoding, we can pick a less likely character, even if it doesn't
+  -- avoid the problem entirely
+  return session_name .. "|" .. git_branch_name
+end
+
+---Delete sessions that have access times older than purge_days_old old
+---@param session_dir string The session directory to look for sessions in
+---@param purge_older_than_minutes number in minutes, e.g. 14400, delete sessions older than 10 days ago
+---@return string # json encoded string of escaped session filenames removed
+function Lib.purge_old_sessions(session_dir, purge_older_than_minutes)
+  local epoch = os.time()
+  local garbage_collect_seconds = purge_older_than_minutes * 60
+  local scan_dir = assert(vim.uv.fs_scandir(session_dir))
+  local out = {}
+
+  if purge_older_than_minutes == 0 or garbage_collect_seconds == 0 then
+    return "[]"
+  end
+
+  local file = vim.uv.fs_scandir_next(scan_dir)
+  while file do
+    local abs_path = session_dir .. file
+    local fd = assert(vim.uv.fs_open(abs_path, "r", 0))
+    local stat = assert(vim.uv.fs_fstat(fd))
+    local atime = stat["atime"]["sec"]
+    assert(vim.uv.fs_close(fd))
+    local age = epoch - atime
+    -- print("file: " .. abs_path .. " age: " .. age)
+    if age > garbage_collect_seconds then
+      assert(vim.uv.fs_unlink(abs_path))
+      table.insert(out, file)
+    end
+
+    file = vim.uv.fs_scandir_next(scan_dir)
+  end
+
+  return vim.json.encode(out)
+end
+
+---Checks to see if there are only empty/unnamed buffers left
+---@return boolean # True if there are only empty/unnamed buffers left
+function Lib.only_blank_buffers_left()
+  local bufs = vim.api.nvim_list_bufs()
+  for _, bufnr in ipairs(bufs) do
+    -- Only consider listed buffers
+    if vim.fn.buflisted(bufnr) == 1 then
+      local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+      local is_empty = #lines <= 1 and (lines[1] == nil or lines[1] == "")
+      -- Use deprecated version for 0.7 support
+      local is_modified = vim.api.nvim_buf_get_option(bufnr, "modified")
+      local has_name = vim.api.nvim_buf_get_name(bufnr) ~= ""
+
+      -- If buffer has a name, is modified, or has content, it's meaningful
+      if has_name or is_modified or not is_empty then
+        return false
+      end
+    end
+  end
+  return true
+end
+
+---Returns true if there are any modified buffers
+---@return boolean # True if there are any modified buffers
+function Lib.has_modified_buffers()
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_valid(buf) and vim.api.nvim_buf_get_option(buf, "modified") then
+      return true
+    end
+  end
+  return false
+end
+
+---Snacks (https://github.com/folke/snacks.nvim) debounce function
+---@generic T
+---@param fn T
+---@param opts? {ms?:number}
+---@return T
+function Lib.debounce(fn, opts)
+  local timer = assert(uv.new_timer())
+  local ms = opts and opts.ms or 20
+  return function()
+    timer:start(ms, 0, vim.schedule_wrap(fn))
+  end
 end
 
 return Lib

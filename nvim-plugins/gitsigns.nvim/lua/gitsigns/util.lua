@@ -1,21 +1,11 @@
+local uv = vim.uv or vim.loop ---@diagnostic disable-line: deprecated
+
+local is_win = vim.fn.has('win32') == 1
+
 local M = {}
 
 function M.path_exists(path)
-  return vim.loop.fs_stat(path) and true or false
-end
-
-local jit_os --- @type string
-
-if jit then
-  jit_os = jit.os:lower()
-end
-
-local is_unix = false
-if jit_os then
-  is_unix = jit_os == 'linux' or jit_os == 'osx' or jit_os == 'bsd'
-else
-  local binfmt = package.cpath:match('%p[\\|/]?%p(%a+)')
-  is_unix = binfmt ~= 'dll'
+  return uv.fs_stat(path) ~= nil
 end
 
 --- @param file string
@@ -59,21 +49,20 @@ local BOM_TABLE = {
   ['utf-1'] = make_bom(0xf7, 0x54, 0x4c),
 }
 
----@param x string
+---@param x string?
 ---@param encoding string
----@return string
+---@return string?
 local function add_bom(x, encoding)
   local bom = BOM_TABLE[encoding]
   if bom then
-    return bom .. x
+    return x and bom .. x or bom
   end
   return x
 end
 
 --- @param bufnr integer
---- @param noendofline? boolean
 --- @return string[]
-function M.buf_lines(bufnr, noendofline)
+function M.buf_lines(bufnr)
   -- nvim_buf_get_lines strips carriage returns if fileformat==dos
   local buftext = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
 
@@ -85,7 +74,7 @@ function M.buf_lines(bufnr, noendofline)
     end
   end
 
-  if not noendofline and vim.bo[bufnr].endofline then
+  if vim.bo[bufnr].endofline then
     -- Add CR to the last line
     if dos then
       buftext[#buftext] = buftext[#buftext] .. '\r'
@@ -134,19 +123,23 @@ function M.set_lines(bufnr, start_row, end_row, lines)
   if vim.bo[bufnr].fileformat == 'dos' then
     lines = M.strip_cr(lines)
   end
-  if start_row == 0 and end_row == -1 and lines[#lines] == '' then
-    lines = vim.deepcopy(lines)
-    lines[#lines] = nil
+  if start_row == 0 and end_row == -1 then
+    if lines[#lines] == '' then
+      lines = vim.deepcopy(lines)
+      lines[#lines] = nil
+    else
+      vim.bo[bufnr].eol = false
+    end
   end
   vim.api.nvim_buf_set_lines(bufnr, start_row, end_row, false, lines)
 end
 
 --- @return string
 function M.tmpname()
-  if is_unix then
-    return os.tmpname()
+  if is_win then
+    return vim.fn.tempname()
   end
-  return vim.fn.tempname()
+  return os.tmpname()
 end
 
 --- @param time number
@@ -197,7 +190,7 @@ end
 function M.redraw(opts)
   if vim.fn.has('nvim-0.10') == 1 then
     vim.api.nvim__redraw(opts)
-  else
+  elseif opts.range then
     vim.api.nvim__buf_redraw_range(opts.buf, opts.range[1], opts.range[2])
   end
 end
@@ -274,6 +267,8 @@ function M.expand_format(fmt, info)
     if not match then
       break
     end
+    --- @cast scol -?
+    --- @cast ecol -?
     --- @cast key string
 
     ret[#ret + 1], fmt = fmt:sub(1, scol - 1), fmt:sub(ecol + 1)
@@ -373,6 +368,58 @@ function M.once(fn)
     called = true
     return fn(...)
   end
+end
+
+--- @param x any
+--- @return integer?
+function M.tointeger(x)
+  local nx = tonumber(x)
+  if nx and nx == math.floor(nx) then
+    --- @cast nx integer
+    return nx
+  end
+end
+
+local has_cygpath --- @type boolean?
+
+--- @async
+--- @param path string
+--- @param mode? 'unix'|'windows' (default: 'windows')
+--- @return string
+function M.cygpath(path, mode)
+  local async = require('gitsigns.async')
+  local system = require('gitsigns.system').system
+
+  if has_cygpath == nil then
+    has_cygpath = is_win and vim.fn.executable('cygpath') == 1
+  end
+
+  if not has_cygpath or uv.fs_stat(path) then
+    return path
+  end
+
+  -- If on windows and path isn't recognizable as a file, try passing it
+  -- through cygpath
+  --- @type string
+  local stdout = async.await(3, system, {
+    'cygpath',
+    '--absolute',
+    '--' .. (mode or 'windows'),
+    path,
+  }, { text = true }).stdout
+  return assert(vim.split(stdout, '\n')[1])
+end
+
+--- @param path string
+--- @return boolean
+function M.is_abspath(path)
+  -- Check if the path is absolute on Windows
+  if is_win and M.cygpath(path):match('^%a:[/\\]') then
+    return true
+  end
+
+  -- Check if the path is absolute on Unix-like systems
+  return vim.startswith(path, '/')
 end
 
 return M

@@ -1,5 +1,5 @@
 local async = require("plenary.async")
-local completion = require("codecompanion.completion")
+local completion = require("codecompanion.providers.completion")
 local config = require("codecompanion.config")
 local ts = require("codecompanion.utils.treesitter")
 local ui = require("codecompanion.utils.ui")
@@ -56,7 +56,25 @@ M.options = {
     local vars = config.strategies.chat.variables
     local vars_max = max("key", vars)
 
-    local tools = config.strategies.chat.agents.tools
+    local tools = {}
+    -- Add tools
+    vim
+      .iter(config.strategies.chat.tools)
+      :filter(function(name)
+        return name ~= "opts" and name ~= "groups"
+      end)
+      :each(function(tool)
+        tools[tool] = {
+          description = config.strategies.chat.tools[tool].description,
+        }
+      end)
+    -- Add groups
+    vim.iter(config.strategies.chat.tools.groups):each(function(tool)
+      tools[tool] = {
+        description = config.strategies.chat.tools.groups[tool].description,
+      }
+    end)
+
     local tools_max = max("key", tools)
 
     local max_length = math.max(keymaps_max, vars_max, tools_max)
@@ -351,7 +369,6 @@ M.toggle_watch = {
           if vim.api.nvim_buf_is_valid(ref.bufnr) and vim.api.nvim_buf_is_loaded(ref.bufnr) then
             chat.watchers:watch(ref.bufnr)
             new_line = string.format("> - %s%s", icons.watched_buffer, clean_id)
-            util.notify("Now watching buffer " .. ref.id)
           else
             -- Buffer is invalid, can't watch it
             ref.opts.watched = false
@@ -361,7 +378,6 @@ M.toggle_watch = {
         else
           chat.watchers:unwatch(ref.bufnr)
           new_line = string.format("> - %s", clean_id)
-          util.notify("Stopped watching buffer " .. ref.id)
         end
 
         -- Update only the current line
@@ -484,7 +500,8 @@ M.change_adapter = {
       local system_prompt = config.opts.system_prompt
       if type(system_prompt) == "function" then
         if chat.messages[1] and chat.messages[1].role == "system" then
-          chat.messages[1].content = system_prompt(chat.adapter)
+          local opts = { adapter = chat.adapter, language = config.opts.language }
+          chat.messages[1].content = system_prompt(opts)
         end
       end
 
@@ -535,7 +552,7 @@ M.change_adapter = {
 
 M.fold_code = {
   callback = function(chat)
-    chat:fold_code()
+    chat.ui:fold_code()
   end,
 }
 
@@ -560,6 +577,19 @@ M.toggle_system_prompt = {
   desc = "Toggle the system prompt",
   callback = function(chat)
     chat:toggle_system_prompt()
+  end,
+}
+
+M.auto_tool_mode = {
+  desc = "Toggle automatic tool mode",
+  callback = function(chat)
+    if vim.g.codecompanion_auto_tool_mode then
+      vim.g.codecompanion_auto_tool_mode = nil
+      return util.notify("Disabled automatic tool mode", vim.log.levels.INFO)
+    else
+      vim.g.codecompanion_auto_tool_mode = true
+      return util.notify("Enabled automatic tool mode", vim.log.levels.INFO)
+    end
   end,
 }
 

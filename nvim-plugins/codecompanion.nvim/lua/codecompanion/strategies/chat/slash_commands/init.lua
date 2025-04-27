@@ -56,6 +56,11 @@ function SlashCommands:execute(item, chat)
   local label = item.label:sub(1)
   log:debug("Executing slash command: %s", label)
 
+  -- If the user has provided a callback function, use that
+  if type(item.config.callback) == "function" then
+    return item.config.callback(chat)
+  end
+
   local callback = resolve(item.config.callback)
   if not callback then
     return log:error("Slash command not found: %s", label)
@@ -99,6 +104,7 @@ function SlashCommands.references(chat, slash_command, opts)
     -- double opts out of the opts table. Hacky, for sure.
     opts.silent = true
     opts.url = opts.url or opts.path
+    opts.description = opts.description
     opts.auto_restore_cache = opts.opts.auto_restore_cache
     opts.ignore_cache = opts.opts.ignore_cache
 

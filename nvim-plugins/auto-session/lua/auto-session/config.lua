@@ -12,10 +12,12 @@ local M = {}
 ---@field auto_save? boolean Enables/disables auto saving session on exit
 ---@field auto_restore? boolean Enables/disables auto restoring session on start
 ---@field auto_create? boolean|function Enables/disables auto creating new session files. Can take a function that should return true/false if a new session file should be created or not
+---@field auto_delete_empty_sessions? boolean Enables/disables deleting the session if there no named, non-empty buffers when auto-saving
 ---@field suppressed_dirs? table Suppress auto session for directories
 ---@field allowed_dirs? table Allow auto session for directories, if empty then all directories are allowed except for suppressed ones
 ---@field auto_restore_last_session? boolean On startup, loads the last saved session if session for cwd does not exist
----@field use_git_branch? boolean Include git branch name in session name to differentiate between sessions for different git branches
+---@field git_use_branch_name? boolean Include git branch name in session name to differentiate between sessions for different git branches
+---@field git_auto_restore_on_branch_change? boolean Should we auto-restore the session when the git branch changes. Requires git_use_branch_name
 ---@field lazy_support? boolean Automatically detect if Lazy.nvim is being used and wait until Lazy is done to make sure session is restored correctly. Does nothing if Lazy isn't being used. Can be disabled if a problem is suspected or for debugging
 ---@field bypass_save_filetypes? table List of file types to bypass auto save when the only buffer open is one of the file types listed, useful to ignore dashboards
 ---@field close_unsupported_windows? boolean Whether to close windows that aren't backed by a real file
@@ -27,6 +29,10 @@ local M = {}
 ---@field log_level? string|integer "debug", "info", "warn", "error" or vim.log.levels.DEBUG, vim.log.levels.INFO, vim.log.levels.WARN, vim.log.levels.ERROR
 ---@field cwd_change_handling? boolean Follow cwd changes, saving a session before change and restoring after
 ---@field lsp_stop_on_restore? boolean|function Should language servers be stopped when restoring a session. Can also be a function that will be called if set. Not called on autorestore from startup
+---
+---@field restore_error_handler? restore_error_fn Called when there's an error restoring. By default, it ignores fold errors otherwise it displays the error and returns false to disable auto_save
+---@field purge_after_minutes? number|nil -- Sessions older than purge_after_minutes will be deleted asynchronously on startup, e.g. set to 14400 to delete sessions that haven't been accessed for more than 10 days, defaults to off (no purging), requires >= nvim 0.10
+---
 ---@field session_lens? SessionLens Session lens configuration options
 ---
 ---Hooks
@@ -40,7 +46,7 @@ local M = {}
 ---@field no_restore_cmds? table executes at VimEnter when no session is restored
 ---@field pre_cwd_changed_cmds? table executes before cwd is changed if cwd_change_handling is true
 ---@field post_cwd_changed_cmds? table executes after cwd is changed if cwd_change_handling is true
-
+---
 ---Sessien Lens Cenfig
 ---@class SessionLens
 ---@field load_on_setup? boolean
@@ -50,16 +56,18 @@ local M = {}
 ---@field previewer? boolean Whether to show a preview of the session file (not very useful to most people)
 ---@field session_control? SessionControl
 ---@field mappings? SessionLensMappings
-
+---
 ---@class SessionControl
 ---@field control_dir? string
 ---@field control_filename? string
-
+---
 ---Session Lens Mapping
 ---@class SessionLensMappings
 ---@field delete_session? table mode and key for deleting a session from the picker
 ---@field alternate_session? table mode and key for swapping to alertnate session from the picker
 ---@field copy_session? table mode and key for copying a session from the picker
+---
+---@alias restore_error_fn fun(error_msg:string): disable_auto_save:boolean
 
 ---@type AutoSession.Config
 local defaults = {
@@ -68,10 +76,12 @@ local defaults = {
   auto_save = true, -- Enables/disables auto saving session on exit
   auto_restore = true, -- Enables/disables auto restoring session on start
   auto_create = true, -- Enables/disables auto creating new session files. Can take a function that should return true/false if a new session file should be created or not
+  auto_delete_empty_sessions = true, -- Enables/disables deleting the session if there no named, non-empty buffers when auto-saving
   suppressed_dirs = nil, -- Suppress session restore/create in certain directories
   allowed_dirs = nil, -- Allow session restore/create in certain directories
   auto_restore_last_session = false, -- On startup, loads the last saved session if session for cwd does not exist
-  use_git_branch = false, -- Include git branch name in session name
+  git_use_branch_name = false, -- Include git branch name in session name
+  git_auto_restore_on_branch_change = false, -- Should we auto-restore the session when the git branch changes. Requires git_use_branch_name
   lazy_support = true, -- Automatically detect if Lazy.nvim is being used and wait until Lazy is done to make sure session is restored correctly. Does nothing if Lazy isn't being used. Can be disabled if a problem is suspected or for debugging
   bypass_save_filetypes = nil, -- List of filetypes to bypass auto save when the only buffer open is one of the file types listed, useful to ignore dashboards
   close_unsupported_windows = true, -- Close windows that aren't backed by normal file before autosaving a session
@@ -81,6 +91,8 @@ local defaults = {
   show_auto_restore_notif = false, -- Whether to show a notification when auto-restoring
   cwd_change_handling = false, -- Follow cwd changes, saving a session before change and restoring after
   lsp_stop_on_restore = false, -- Should language servers be stopped when restoring a session. Can also be a function that will be called if set. Not called on autorestore from startup
+  restore_error_handler = nil, -- Called when there's an error restoring. By default, it ignores fold errors otherwise it displays the error and returns false to disable auto_save
+  purge_after_minutes = nil, -- Sessions older than purge_after_minutes will be deleted asynchronously on startup, e.g. set to 14400 to delete sessions that haven't been accessed for more than 10 days, defaults to off (no purging), requires >= nvim 0.10
   log_level = "error", -- Sets the log level of the plugin (debug, info, warn, error).
 
   ---@type SessionLens
@@ -132,7 +144,7 @@ local function check_for_vim_globals(config)
     auto_session_suppress_dirs = "suppressed_dirs",
     auto_session_create_enabled = "auto_create",
     auto_session_enable_last_session = "auto_restore_last_session",
-    auto_session_use_git_branch = "use_git_branch",
+    auto_session_use_git_branch = "git_use_branch_name",
     pre_save_cmds = "pre_save_cmds",
     save_extra_cmds = "save_extra_cmds",
     post_save_cmds = "post_save_cmds",
@@ -166,7 +178,8 @@ local function check_old_config_names(config)
     auto_session_suppress_dirs = "suppressed_dirs",
     auto_session_create_enabled = "auto_create",
     auto_session_enable_last_session = "auto_restore_last_session",
-    auto_session_use_git_branch = "use_git_branch",
+    auto_session_use_git_branch = "git_use_branch_name",
+    use_git_branch = "git_use_branch_name",
     auto_restore_lazy_delay_enabled = "lazy_support",
     bypass_session_save_file_types = "bypass_save_filetypes",
     silent_restore = "continue_restore_on_error",
@@ -228,6 +241,14 @@ end
 function M.check(logger)
   if not vim.tbl_contains(vim.split(vim.o.sessionoptions, ","), "localoptions") then
     logger.warn "vim.o.sessionoptions is missing localoptions. \nUse `:checkhealth autosession` for more info."
+  end
+
+  if M.purge_after_minutes and vim.fn.has "nvim-0.10" ~= 1 then
+    logger.warn "the purge_after_minutes options requires nvim >= 0.10"
+  end
+
+  if not M.git_use_branch_name and M.git_auto_restore_on_branch_change then
+    logger.error "git_auto_restore_on_branch_change requires git_use_branch_name = true"
   end
 
   -- TODO: At some point, we should pop up a warning about old config if

@@ -1,5 +1,6 @@
 local log = require('gitsigns.debug.log')
 local util = require('gitsigns.util')
+local config = require('gitsigns.config').config
 
 local min, max = math.min, math.max
 
@@ -28,6 +29,7 @@ local min, max = math.min, math.max
 --- @field added Gitsigns.Hunk.Node
 --- @field removed Gitsigns.Hunk.Node
 
+--- @class gitsigns.hunks
 local M = {}
 
 --- @param old_start integer
@@ -54,9 +56,10 @@ end
 --- @param hunks Gitsigns.Hunk.Hunk[]
 --- @param top integer
 --- @param bot integer
---- @return Gitsigns.Hunk.Hunk
+--- @return Gitsigns.Hunk.Hunk?
 function M.create_partial_hunk(hunks, top, bot)
   local pretop, precount = top, bot - top + 1
+  local unused = 0
   for _, h in ipairs(hunks) do
     local added_in_hunk = h.added.count - h.removed.count
 
@@ -79,6 +82,9 @@ function M.create_partial_hunk(hunks, top, bot)
         -- Range within hunk
         added_in_range = added_above_bot - added_above_top
         pretop = pretop - added_above_top
+      else
+        -- No intersection
+        unused = unused + 1
       end
 
       if top > h.vend then
@@ -87,6 +93,11 @@ function M.create_partial_hunk(hunks, top, bot)
     end
 
     precount = precount - added_in_range
+  end
+
+  if unused == #hunks then
+    -- top and bot are not in any hunk
+    return
   end
 
   if precount == 0 then
@@ -125,15 +136,17 @@ function M.parse_diff_line(line)
 
   -- diffKey: "-xx,n +yy"
   -- pre: {xx, n}, now: {yy}
-  --- @type string[], string[]
-  local pre, now = unpack(vim.tbl_map(
+  local p = vim.tbl_map(
     --- @param s string
     --- @return string[]
     function(s)
-      return vim.split(string.sub(s, 2), ',')
+      return vim.split(s:sub(2), ',')
     end,
     vim.split(diffkey, ' ')
-  ))
+  )
+
+  --- @type [string,string?], [string,string?]
+  local pre, now = p[1], p[2]
 
   local hunk = M.create_hunk(
     tointeger(pre[1]),
@@ -167,15 +180,9 @@ end
 --- @param next Gitsigns.Hunk.Hunk?
 --- @param min_lnum integer
 --- @param max_lnum integer
---- @param untracked boolean
+--- @param untracked? boolean
 --- @return Gitsigns.Sign[]
-function M.calc_signs(hunk, next, min_lnum, max_lnum, untracked)
-  if not (not untracked or hunk.type == 'add') then
-    log.eprintf('Invalid hunk with untracked=%s hunk="%s"', untracked, hunk.head)
-    return {}
-  end
-  min_lnum = min_lnum or 1
-  max_lnum = max_lnum or math.huge
+local function calc_signs(hunk, next, min_lnum, max_lnum, untracked)
   local start, added, removed = hunk.added.start, hunk.added.count, hunk.removed.count
 
   if hunk.type == 'delete' and start == 0 then
@@ -194,13 +201,14 @@ function M.calc_signs(hunk, next, min_lnum, max_lnum, untracked)
 
   -- if this is a change hunk, mark changedelete if lines were removed or if the
   -- next hunk removes on this hunks last line
-  local changedelete = false
-  if hunk.type == 'change' then
-    changedelete = removed > added
-    if next ~= nil and next.type == 'delete' then
-      changedelete = changedelete or hunk.added.start + hunk.added.count - 1 == next.added.start
-    end
-  end
+  local changedelete = hunk.type == 'change'
+    and (
+      removed > added
+      or (
+        (next and next.type == 'delete')
+        and hunk.added.start + hunk.added.count - 1 == next.added.start
+      )
+    )
 
   for lnum = max(start, min_lnum), min(cend, max_lnum) do
     signs[#signs + 1] = {
@@ -209,6 +217,68 @@ function M.calc_signs(hunk, next, min_lnum, max_lnum, untracked)
         or hunk.type,
       count = lnum == start and (hunk.type == 'add' and added or removed) or nil,
       lnum = lnum,
+    }
+  end
+
+  if hunk.type == 'change' and added > removed and hunk.vend >= min_lnum and cend <= max_lnum then
+    for lnum = max(cend, min_lnum), min(hunk.vend, max_lnum) do
+      signs[#signs + 1] = {
+        type = 'add',
+        count = lnum == hunk.vend and (added - removed) or nil,
+        lnum = lnum,
+      }
+    end
+  end
+
+  return signs
+end
+
+--- Calculate signs needed to be applied from a hunk for a specified line range.
+--- @param prev_hunk Gitsigns.Hunk.Hunk?
+--- @param hunk Gitsigns.Hunk.Hunk
+--- @param next_hunk Gitsigns.Hunk.Hunk?
+--- @param min_lnum? integer
+--- @param max_lnum? integer
+--- @param untracked? boolean
+--- @return Gitsigns.Sign[]
+function M.calc_signs(prev_hunk, hunk, next_hunk, min_lnum, max_lnum, untracked)
+  if not (not untracked or hunk.type == 'add') then
+    log.eprintf('Invalid hunk with untracked=%s hunk="%s"', untracked, hunk.head)
+    return {}
+  end
+  min_lnum = math.max(1, min_lnum or 1)
+  max_lnum = max_lnum or math.huge
+
+  if not config._new_sign_calc then
+    return calc_signs(hunk, next_hunk, min_lnum, max_lnum, untracked)
+  end
+
+  local start, added, removed = hunk.added.start, hunk.added.count, hunk.removed.count
+
+  local cend = change_end(hunk)
+
+  local topdelete = hunk.type == 'delete'
+    and (start == 0 or prev_hunk and change_end(prev_hunk) == start)
+    and (not next_hunk or next_hunk.added.start ~= start + 1)
+
+  if topdelete and min_lnum == 1 then
+    min_lnum = 0
+  end
+
+  --- @type Gitsigns.Sign[]
+  local signs = {}
+
+  for lnum = max(start, min_lnum), min(cend, max_lnum) do
+    local changedelete = hunk.type == 'change'
+      and (removed > added and lnum == cend or prev_hunk and prev_hunk.added.start == 0)
+
+    signs[#signs + 1] = {
+      type = topdelete and 'topdelete'
+        or changedelete and 'changedelete'
+        or untracked and 'untracked'
+        or hunk.type,
+      count = lnum == start and (hunk.type == 'add' and added or removed) or nil,
+      lnum = lnum + (topdelete and 1 or 0),
     }
   end
 
@@ -288,7 +358,6 @@ end
 --- @param hunks Gitsigns.Hunk.Hunk[]
 --- @return Gitsigns.StatusObj
 function M.get_summary(hunks)
-  --- @type Gitsigns.StatusObj
   local status = { added = 0, changed = 0, removed = 0 }
 
   for _, hunk in ipairs(hunks or {}) do
@@ -309,7 +378,7 @@ function M.get_summary(hunks)
 end
 
 --- @param lnum integer
---- @param hunks Gitsigns.Hunk.Hunk[]
+--- @param hunks Gitsigns.Hunk.Hunk[]?
 --- @return Gitsigns.Hunk.Hunk?, integer?
 function M.find_hunk(lnum, hunks)
   for i, hunk in ipairs(hunks or {}) do
@@ -479,6 +548,67 @@ function M.filter_common(a, b)
   end
 
   return ret
+end
+
+--- @param hunk Gitsigns.Hunk.Hunk
+--- @param fileformat string
+--- @return Gitsigns.LineSpec
+function M.linespec_for_hunk(hunk, fileformat)
+  local hls = {} --- @type [string, Gitsigns.HlMark[]][][]
+
+  local removed, added = hunk.removed.lines, hunk.added.lines
+
+  for _, spec in ipairs({
+    { sym = '-', lines = removed, hl = 'GitSignsDeletePreview' },
+    { sym = '+', lines = added, hl = 'GitSignsAddPreview' },
+  }) do
+    for _, l in ipairs(spec.lines) do
+      if fileformat == 'dos' then
+        l = l:gsub('\r$', '') --[[@as string]]
+      end
+      hls[#hls + 1] = {
+        {
+          spec.sym .. l,
+          {
+            {
+              start_row = 0,
+              hl_group = spec.hl,
+              end_row = 1, -- Highlight whole line
+            },
+          },
+        },
+      }
+    end
+  end
+
+  if config.diff_opts.internal then
+    local removed_regions, added_regions =
+      require('gitsigns.diff_int').run_word_diff(removed, added)
+
+    for _, region in ipairs(removed_regions) do
+      local i = region[1]
+      local hlm = hls[i][1][2]
+      hlm[#hlm + 1] = {
+        start_row = 0,
+        hl_group = 'GitSignsDeleteInline',
+        start_col = region[3],
+        end_col = region[4],
+      }
+    end
+
+    for _, region in ipairs(added_regions) do
+      local i = hunk.removed.count + region[1]
+      local hlm = hls[i][1][2]
+      hlm[#hlm + 1] = {
+        start_row = 0,
+        hl_group = 'GitSignsAddInline',
+        start_col = region[3],
+        end_col = region[4],
+      }
+    end
+  end
+
+  return hls
 end
 
 return M

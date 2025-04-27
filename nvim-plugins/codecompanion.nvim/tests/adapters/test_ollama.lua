@@ -1,118 +1,83 @@
-local adapter
-local adapter_helpers = require("tests.adapters.helpers")
 local h = require("tests.helpers")
+local adapter
 
-local chat
+local new_set = MiniTest.new_set
+T = new_set()
 
---------------------------------------------------- OUTPUT FROM THE CHAT BUFFER
-local messages = { {
-  content = "Explain Ruby in two words",
-  role = "user",
-} }
-
-local stream_response = {
-  {
-    request = [[{"model":"llama2","created_at":"2024-03-07T20:02:30.622386Z","message":{"role":"assistant","content":"\n"},"done":false}]],
-    output = {
-      content = "\n",
-      role = "assistant",
-    },
-  },
-  {
-    request = [[{"model":"llama2","created_at":"2024-03-07T20:02:30.652682Z","message":{"role":"assistant","content":"\""},"done":false}]],
-    output = {
-      content = '"',
-      role = "assistant",
-    },
-  },
-  {
-    request = [[{"model":"llama2","created_at":"2024-03-07T20:02:30.681756Z","message":{"role":"assistant","content":"Be"},"done":false}]],
-    output = {
-      content = "Be",
-      role = "assistant",
-    },
-  },
-  {
-    request = [[{"model":"llama2","created_at":"2024-03-07T20:02:30.710758Z","message":{"role":"assistant","content":"aut"},"done":false}]],
-    output = {
-      content = "aut",
-      role = "assistant",
-    },
-  },
-  {
-    request = [[{"model":"llama2","created_at":"2024-03-07T20:02:30.739508Z","message":{"role":"assistant","content":"iful"},"done":false}]],
-    output = {
-      content = "iful",
-      role = "assistant",
-    },
-  },
-  {
-    request = [[{"model":"llama2","created_at":"2024-03-07T20:02:30.770345Z","message":{"role":"assistant","content":" Language"},"done":false}]],
-    output = {
-      content = " Language",
-      role = "assistant",
-    },
-  },
-  {
-    request = [[{"model":"llama2","created_at":"2024-03-07T20:02:30.7994Z","message":{"role":"assistant","content":"\""},"done":false}]],
-    output = {
-      content = '"',
-      role = "assistant",
-    },
-  },
-}
-
------------------------------------------------------------------------- // END
-
-describe("Ollama adapter", function()
-  before_each(function()
-    adapter = require("codecompanion.adapters").extend("ollama", {
-      schema = {
-        model = {
-          default = function()
-            return "llama2"
-          end,
-          choices = { "llama2" },
+T["Ollama adapter"] = new_set({
+  hooks = {
+    pre_case = function()
+      adapter = require("codecompanion.adapters").extend("ollama", {
+        schema = {
+          model = {
+            default = "llama3.1:latest",
+          },
+          choices = {
+            "llama3.1:latest",
+          },
+          num_ctx = {
+            default = 20000,
+          },
         },
-      },
-    })
-    chat, _ = h.setup_chat_buffer(nil, adapter)
-  end)
+      })
+    end,
+  },
+})
 
-  after_each(function()
-    h.teardown_chat_buffer()
-  end)
+T["Ollama adapter"]["it can form messages to be sent to the API"] = function()
+  local messages = { {
+    content = "Explain Ruby in two words",
+    role = "user",
+  } }
 
-  it("correctly forms the settings", function()
-    -- Equivalent to the chat:submit() method
-    local params = adapter:map_schema_to_params(chat.settings).parameters
-    h.eq({
-      model = adapter.schema.model.default,
-      options = {
-        mirostat = 0,
-        mirostat_eta = 0.1,
-        mirostat_tau = 5,
-        num_ctx = 2048,
-        num_predict = -1,
-        repeat_last_n = 64,
-        repeat_penalty = 1.1,
-        seed = 0,
-        temperature = 0.8,
-        tfs_z = 1,
-        top_k = 40,
-        top_p = 0.9,
-      },
-    }, params)
+  h.eq({ messages = messages }, adapter.handlers.form_messages(adapter, messages))
+end
 
-    -- Expands the model function
-    h.eq(type(adapter.handlers.form_parameters(adapter, adapter:set_env_vars(params), messages).model), "string")
-  end)
+T["Ollama adapter"]["Streaming"] = new_set()
 
-  it("can form messages to be sent to the API", function()
-    h.eq({ messages = messages }, adapter.handlers.form_messages(adapter, messages))
-  end)
+T["Ollama adapter"]["Streaming"]["can output streamed data into the chat buffer"] = function()
+  local output = ""
+  local lines = vim.fn.readfile("tests/adapters/stubs/ollama_streaming.txt")
+  for _, line in ipairs(lines) do
+    local chat_output = adapter.handlers.chat_output(adapter, line)
+    if chat_output and chat_output.output.content then
+      output = output .. chat_output.output.content
+    end
+  end
 
-  it("can output streamed data into a format for the chat buffer", function()
-    h.eq(stream_response[#stream_response].output, adapter_helpers.chat_buffer_output(stream_response, adapter))
-  end)
-end)
+  h.eq("**Dynamic Object-Oriented**", output)
+end
+
+T["Ollama adapter"]["No Streaming"] = new_set({
+  hooks = {
+    pre_case = function()
+      adapter = require("codecompanion.adapters").extend("ollama", {
+        opts = {
+          stream = false,
+        },
+      })
+    end,
+  },
+})
+
+T["Ollama adapter"]["No Streaming"]["can output for the chat buffer"] = function()
+  local data = vim.fn.readfile("tests/adapters/stubs/ollama_no_streaming.txt")
+  data = table.concat(data, "\n")
+
+  -- Match the format of the actual request
+  local json = { body = data }
+
+  h.eq("Dynamic Scripting language", adapter.handlers.chat_output(adapter, json).output.content)
+end
+
+T["Ollama adapter"]["No Streaming"]["can output for the inline assistant"] = function()
+  local data = vim.fn.readfile("tests/adapters/stubs/ollama_no_streaming.txt")
+  data = table.concat(data, "\n")
+
+  -- Match the format of the actual request
+  local json = { body = data }
+
+  h.eq("Dynamic Scripting language", adapter.handlers.inline_output(adapter, json).output)
+end
+
+return T

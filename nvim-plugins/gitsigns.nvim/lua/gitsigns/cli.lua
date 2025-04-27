@@ -13,13 +13,15 @@ local sources = {
   [Debug] = false,
 }
 
--- try to parse each argument as a lua boolean, nil or number, if fails then
--- keep argument as a string:
---
---    'false'      -> false
---    'nil'         -> nil
---    '100'         -> 100
---    'HEAD~300' -> 'HEAD~300'
+--- try to parse each argument as a lua boolean, nil or number, if fails then
+--- keep argument as a string:
+---
+---    'false'      -> false
+---    'nil'         -> nil
+---    '100'         -> 100
+---    'HEAD~300' -> 'HEAD~300'
+--- @param a string
+--- @return boolean|number|string?
 local function parse_to_lua(a)
   if tonumber(a) then
     return tonumber(a)
@@ -65,7 +67,7 @@ M.run = async.create(1, function(params)
   local func = pos_args_raw[1]
 
   if not func then
-    func = async.wait(3, vim.ui.select, M.complete('', 'Gitsigns '), {}) --[[@as string]]
+    func = async.await(3, vim.ui.select, M.complete('', 'Gitsigns '), {}) --[[@as string]]
     if not func then
       return
     end

@@ -21,7 +21,7 @@ local SessionLens -- will be initialized later
 ---
 ---  `:SessionPurgeOrphaned` - removes all orphaned sessions with no working directory left.
 ---
----  `:SessionSearch` - open a session picker, uses Telescope if installed, vim.ui.select otherwise
+---  `:SessionSearch` - open a session picker, uses Telescope or Snacks if installed, vim.ui.select otherwise
 ---@brief ]]
 
 local M = {}
@@ -112,7 +112,6 @@ local function setup_session_lens()
   local has_telescope, telescope = pcall(require, "telescope")
 
   if not has_telescope then
-    Lib.logger.info "Telescope.nvim is not installed. Session Lens cannot be setup!"
     return false
   end
 
@@ -120,6 +119,80 @@ local function setup_session_lens()
   -- Register session-lens as an extension so :Telescope will complete on session-lens
   telescope.load_extension "session-lens"
   return true
+end
+
+local function has_snacks()
+  local success, snacks_picker_enabled = pcall(function()
+    ---@diagnostic disable-next-line: undefined-field
+    return Snacks.config.picker.enabled
+  end)
+  return success and snacks_picker_enabled
+end
+
+local function snacks_session_search()
+  local mappings = Config.session_lens.mappings or {}
+  Snacks.picker.pick {
+    title = "Sessions",
+    finder = function()
+      return Lib.get_session_list(M.AutoSession.get_root_dir())
+    end,
+    format = "text",
+    transform = function(item)
+      item.text = item.display_name
+      item.file = item.path
+    end,
+    layout = {
+      preview = Config.session_lens.previewer,
+    },
+    win = {
+      input = {
+        keys = {
+          ["dd"] = "session_delete",
+          [mappings.delete_session[2]] = { "session_delete", mode = mappings.delete_session[1] },
+          [mappings.alternate_session[2]] = { "session_alternate", mode = mappings.alternate_session[1] },
+          [mappings.copy_session[2]] = { "session_copy", mode = mappings.copy_session[1] },
+        },
+      },
+      list = { keys = { ["dd"] = "session_delete" } },
+    },
+    actions = {
+      confirm = function(picker, item)
+        picker:close()
+        vim.schedule(function()
+          M.AutoSession.autosave_and_restore(item.session_name)
+        end)
+      end,
+      session_delete = function(picker, item)
+        vim.schedule(function()
+          M.AutoSession.DeleteSessionFile(item.path, item.display_name)
+          picker:find() -- refresh picker
+        end)
+      end,
+      session_alternate = function(picker, _)
+        vim.schedule(function()
+          local altername_session_name = Lib.get_alternate_session_name(Config.session_lens.session_control)
+          if not altername_session_name then
+            return
+          end
+          picker:close()
+          vim.defer_fn(function()
+            M.AutoSession.autosave_and_restore(altername_session_name)
+          end, 50)
+        end)
+      end,
+      session_copy = function(picker, item)
+        vim.schedule(function()
+          local new_name = vim.fn.input("New session name: ", item.text)
+          if not new_name or new_name == "" or new_name == item.text then
+            return
+          end
+          local content = vim.fn.readfile(item.path)
+          vim.fn.writefile(content, M.AutoSession.get_root_dir() .. Lib.escape_session_name(new_name) .. ".vim")
+          picker:find() -- refresh picker
+        end)
+      end,
+    },
+  }
 end
 
 local function setup_dirchanged_autocmds(AutoSession)
@@ -132,7 +205,7 @@ local function setup_dirchanged_autocmds(AutoSession)
     callback = function()
       Lib.logger.debug "DirChangedPre"
       Lib.logger.debug {
-        cwd = vim.fn.getcwd(),
+        cwd = vim.fn.getcwd(-1, -1),
         target = vim.v.event.directory,
         ["changed window"] = tostring(vim.v.event.changed_window),
         scope = vim.v.event.scope,
@@ -156,6 +229,9 @@ local function setup_dirchanged_autocmds(AutoSession)
 
       AutoSession.AutoSaveSession()
       AutoSession.run_cmds "pre_cwd_changed"
+
+      -- Clear the current session, fixes #399
+      vim.v.this_session = ""
     end,
     pattern = "global",
   })
@@ -163,7 +239,7 @@ local function setup_dirchanged_autocmds(AutoSession)
   vim.api.nvim_create_autocmd("DirChanged", {
     callback = function()
       Lib.logger.debug "DirChanged"
-      Lib.logger.debug("  cwd: " .. vim.fn.getcwd())
+      Lib.logger.debug("  cwd: " .. vim.fn.getcwd(-1, -1))
       Lib.logger.debug("  changed window: " .. tostring(vim.v.event.changed_window))
       Lib.logger.debug("  scope: " .. vim.v.event.scope)
 
@@ -218,6 +294,7 @@ function M.setup_autocmds(AutoSession)
   vim.api.nvim_create_user_command("SessionSave", function(args)
     return AutoSession.SaveSession(args.args)
   end, {
+    complete = complete_session,
     bang = true,
     nargs = "?",
     desc = "Save session using current working directory as the session name or an optional session name",
@@ -256,9 +333,14 @@ function M.setup_autocmds(AutoSession)
   })
 
   vim.api.nvim_create_user_command("SessionSearch", function()
-    -- If Telescope is installed, use that otherwise use vim.ui.select
+    -- Use telescope if installed, otherwise snacks, otherwise vim.ui.select
     if setup_session_lens() and SessionLens then
       vim.cmd "Telescope session-lens"
+      return
+    end
+
+    if has_snacks() then
+      snacks_session_search()
       return
     end
 
@@ -306,7 +388,7 @@ function M.setup_autocmds(AutoSession)
 
       if not Config.lazy_support then
         -- If auto_restore_lazy_delay_enabled is false, just restore the session as normal
-        AutoSession.auto_restore_session_at_vim_enter()
+        AutoSession.start()
         return
       end
 
@@ -314,14 +396,14 @@ function M.setup_autocmds(AutoSession)
       local ok, lazy_view = pcall(require, "lazy.view")
       if not ok then
         -- No Lazy, load as usual
-        AutoSession.auto_restore_session_at_vim_enter()
+        AutoSession.start()
         return
       end
 
       if not lazy_view.visible() then
         -- Lazy isn't visible, load as usual
         Lib.logger.debug "Lazy is loaded, but not visible, will try to restore session"
-        AutoSession.auto_restore_session_at_vim_enter()
+        AutoSession.start()
         return
       end
 
@@ -366,7 +448,7 @@ function M.setup_autocmds(AutoSession)
         -- Schedule restoration for the next pass in the event loop to time for the window to close
         -- Not doing this could create a blank buffer in the restored session
         vim.schedule(function()
-          AutoSession.auto_restore_session_at_vim_enter()
+          AutoSession.start()
         end)
       end,
     })

@@ -19,11 +19,15 @@ The chat buffer uses markdown as its syntax and `H2` headers separate the user a
 ## Messages
 
 > [!TIP]
-> The message history can be modified via the debug window (`gd`) in the chat buffer
+> The message history and adapter settings can be modified via the debug window (`gd`) in the chat buffer
 
 It's important to note that some messages, such as system prompts or context provided via [Slash Commands](/usage/chat-buffer/slash-commands), will be hidden. This is to keep the chat buffer uncluttered from a UI perspective. Using the `gd` keymap opens up the debug window, which allows the user to see the full contents of the messages table which will be sent to the LLM on the next turn.
 
 The message history cannot be altered directly in the chat buffer. However, it can be modified in the debug window. This window is simply a Lua buffer which the user can edit as they wish. To persist any changes, the chat buffer keymaps for sending a message (defaults: `<CR>` or `<C-s>`) can be used.
+
+## Settings
+
+An adapters settings can also be changed via the debug window (`gd`). This allows you to modify an adapter's schema, changing things like the specific model and the temperature etc. Be sure to save the changes to the debug window to persist them to the chat buffer.
 
 ## Completion
 
@@ -48,6 +52,7 @@ The keymaps available to the user in normal mode are:
 - `gw` to watch a referenced buffer
 - `gr` to regenerate the last response
 - `gs` to toggle the system prompt on/off
+- `gta` to toggle auto tool mode
 - `gx` to clear the chat buffer's contents
 - `gy` to yank the last codeblock in the chat buffer
 - `[[` to move to the previous header
@@ -66,9 +71,9 @@ Sharing context with an LLM is crucial in order to generate useful responses. In
 
 In order to allow for references to self-update, they can be _pinned_ (for files and buffers) or _watched_ (for buffers).
 
-File and buffer references can be _pinned_ to a chat buffer with the `gp` keymap. Pinning results in the content from the object being reloaded and shared with the LLM on every turn. The advantage of this is that the LLM will always receive a fresh copy of the source data regardless of any changes. This can be useful if you're working with agents and tools. However, please note that this can consume a lot of tokens.
+File and buffer references can be _pinned_ to a chat buffer with the `gp` keymap (when your cursor is on the line of the shared buffer in the "> Sharing section). Pinning results in the content from the object being reloaded and shared with the LLM on every turn. The advantage of this is that the LLM will always receive a fresh copy of the source data regardless of any changes. This can be useful if you're working with agents and tools. However, please note that this can consume a lot of tokens.
 
-Buffer references can be _watched_ via the `gw` keymap. Watching, whilst similar to pinning, is a more token-conscious way of keeping the LLM up to date on the contents of a buffer. Watchers track changes (adds, edits, deletes) in the underlying buffer and update the LLM on each turn, with only those changes.
+Buffer references can be _watched_ via the `gw` keymap (when your cursor is on the line of the shared buffer in the "> Sharing section). Watching, whilst similar to pinning, is a more token-conscious way of keeping the LLM up to date on the contents of a buffer. Watchers track changes (adds, edits, deletes) in the underlying buffer and update the LLM on each turn, with only those changes.
 
 If a reference is added by mistake, it can be removed from the chat buffer by simply deleting it from the `Sharing` blockquote. On the next turn, all context related to that reference will be removed from the message history.
 

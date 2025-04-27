@@ -1,4 +1,4 @@
-*auto-save.nvim.txt*     For Neovim >= 0.8.0     Last change: 2024 December 04
+*auto-save.nvim.txt*      For Neovim >= 0.8.0     Last change: 2025 January 07
 
 ==============================================================================
 Table of Contents                           *auto-save.nvim-table-of-contents*
@@ -95,7 +95,7 @@ VIM-PLUG                                *auto-save.nvim-installation-vim-plug*
     {
       enabled = true, -- start auto-save when the plugin is loaded (i.e. when your package manager loads it)
       trigger_events = { -- See :h events
-        immediate_save = { "BufLeave", "FocusLost" }, -- vim events that trigger an immediate save
+        immediate_save = { "BufLeave", "FocusLost", "QuitPre", "VimSuspend" }, -- vim events that trigger an immediate save
         defer_save = { "InsertLeave", "TextChanged" }, -- vim events that trigger a deferred save (saves after `debounce_delay`)
         cancel_deferred_save = { "InsertEnter" }, -- vim events that cancel a pending deferred save
       },

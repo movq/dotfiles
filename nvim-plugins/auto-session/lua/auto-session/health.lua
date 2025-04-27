@@ -73,10 +73,21 @@ local function check_lazy_settings()
   end
 end
 
+local function check_features()
+  local loggerObj = {
+    error = error,
+    info = info,
+    warn = warn,
+  }
+
+  Config.check(loggerObj)
+end
+
 function M.check()
   start "vim options"
   check_session_options()
   check_lazy_settings()
+  check_features()
 
   start "Config"
   if Config.has_old_config then

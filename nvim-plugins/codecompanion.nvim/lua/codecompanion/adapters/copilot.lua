@@ -4,6 +4,11 @@ local log = require("codecompanion.utils.log")
 local openai = require("codecompanion.adapters.openai")
 local utils = require("codecompanion.utils.adapters")
 
+local _cache_expires
+local _cache_file = vim.fn.tempname()
+local _cached_adapter
+local _cached_models
+
 ---@alias CopilotOAuthToken string|nil
 local _oauth_token
 
@@ -82,7 +87,7 @@ end
 ---@return CopilotToken
 local function authorize_token()
   if _github_token and _github_token.expires_at > os.time() then
-    log:debug("Reusing GitHub Copilot token")
+    log:trace("Reusing GitHub Copilot token")
     return _github_token
   end
 
@@ -102,6 +107,90 @@ local function authorize_token()
 
   _github_token = vim.json.decode(request.body)
   return _github_token
+end
+
+---Get and authorize a GitHub Copilot token
+---@return boolean success
+local function get_and_authorize_token()
+  _oauth_token = get_token()
+  if not _oauth_token then
+    log:error("Copilot Adapter: No token found. Please refer to https://github.com/github/copilot.vim")
+    return false
+  end
+
+  _github_token = authorize_token()
+  if not _github_token or vim.tbl_isempty(_github_token) then
+    log:error("Copilot Adapter: Could not authorize your GitHub Copilot token")
+    return false
+  end
+
+  return true
+end
+
+---Reset the cached adapter
+---@return nil
+local function reset()
+  _cached_adapter = nil
+end
+
+---Get a list of available Copilot models
+---@params self CodeCompanion.Adapter
+---@params opts? table
+---@return table
+local function get_models(self, opts)
+  if _cached_models and _cache_expires and _cache_expires > os.time() then
+    return _cached_models
+  end
+
+  if not _cached_adapter then
+    if not self then
+      return {}
+    end
+    _cached_adapter = self
+  end
+
+  get_and_authorize_token()
+  local url = "https://api.githubcopilot.com"
+  local headers = vim.deepcopy(_cached_adapter.headers)
+  headers["Authorization"] = "Bearer " .. _github_token.token
+
+  local ok, response = pcall(function()
+    return curl.get(url .. "/models", {
+      sync = true,
+      headers = headers,
+      insecure = config.adapters.opts.allow_insecure,
+      proxy = config.adapters.opts.proxy,
+    })
+  end)
+  if not ok then
+    log:error("Could not get the Copilot models from " .. url .. "/models.\nError: %s", response)
+    return {}
+  end
+
+  local ok, json = pcall(vim.json.decode, response.body)
+  if not ok then
+    log:error("Error parsing the response from " .. url .. "/models.\nError: %s", response.body)
+    return {}
+  end
+
+  local models = {}
+  for _, model in ipairs(json.data) do
+    if model.model_picker_enabled and model.capabilities.type == "chat" then
+      local choice_opts = {}
+
+      -- streaming support
+      if model.capabilities.supports.streaming then
+        choice_opts.can_stream = true
+      end
+
+      models[model.id] = { opts = choice_opts }
+    end
+  end
+
+  _cached_models = models
+  _cache_expires = utils.refresh_cache(_cache_file, config.adapters.opts.cache_models_for)
+
+  return models
 end
 
 ---@class Copilot.Adapter: CodeCompanion.Adapter
@@ -131,7 +220,7 @@ return {
     Authorization = "Bearer ${api_key}",
     ["Content-Type"] = "application/json",
     ["Copilot-Integration-Id"] = "vscode-chat",
-    ["editor-version"] = "Neovim/" .. vim.version().major .. "." .. vim.version().minor .. "." .. vim.version().patch,
+    ["Editor-Version"] = "Neovim/" .. vim.version().major .. "." .. vim.version().minor .. "." .. vim.version().patch,
   },
   handlers = {
     ---Check for a token before starting the request
@@ -139,28 +228,22 @@ return {
     ---@return boolean
     setup = function(self)
       local model = self.schema.model.default
-      local model_opts = self.schema.model.choices[model]
-      if model_opts and model_opts.opts then
-        self.opts = vim.tbl_deep_extend("force", self.opts, model_opts.opts)
+      local choices = self.schema.model.choices
+      if type(model) == "function" then
+        model = model(self)
       end
+      if type(choices) == "function" then
+        choices = choices(self)
+      end
+      local model_opts = choices[model]
 
-      if self.opts and self.opts.stream then
+      if (self.opts and self.opts.stream) and (model_opts and model_opts.opts and model_opts.opts.can_stream) then
         self.parameters.stream = true
+      else
+        self.parameters.stream = nil
       end
 
-      _oauth_token = get_token()
-      if not _oauth_token then
-        log:error("Copilot Adapter: No token found. Please refer to https://github.com/github/copilot.vim")
-        return false
-      end
-
-      _github_token = authorize_token()
-      if not _github_token or vim.tbl_isempty(_github_token) then
-        log:error("Copilot Adapter: Could not authorize your GitHub Copilot token")
-        return false
-      end
-
-      return true
+      return get_and_authorize_token()
     end,
 
     --- Use the OpenAI adapter for the bulk of the work
@@ -194,39 +277,29 @@ return {
       return openai.handlers.inline_output(self, data, context)
     end,
     on_exit = function(self, data)
+      reset()
       return openai.handlers.on_exit(self, data)
     end,
   },
   schema = {
+    ---@type CodeCompanion.Schema
     model = {
       order = 1,
       mapping = "parameters",
       type = "enum",
       desc = "ID of the model to use. See the model endpoint compatibility table for details on which models work with the Chat API.",
       ---@type string|fun(): string
-      default = "gpt-4o-2024-08-06",
-      choices = {
-        ["o3-mini-2025-01-31"] = { opts = { can_reason = true } },
-        ["o1-2024-12-17"] = { opts = { can_reason = true } },
-        ["o1-mini-2024-09-12"] = { opts = { can_reason = true } },
-        "claude-3.5-sonnet",
-        "gpt-4o-2024-08-06",
-      },
+      default = "gpt-4o",
+      choices = function(self)
+        return get_models(self)
+      end,
     },
+    ---@type CodeCompanion.Schema
     reasoning_effort = {
       order = 2,
       mapping = "parameters",
       type = "string",
       optional = true,
-      condition = function(schema)
-        local model = schema.model.default
-        if type(model) == "function" then
-          model = model()
-        end
-        if schema.model.choices[model] and schema.model.choices[model].opts then
-          return schema.model.choices[model].opts.can_reason
-        end
-      end,
       default = "medium",
       desc = "Constrains effort on reasoning for reasoning models. Reducing reasoning effort can result in faster responses and fewer tokens used on reasoning in a response.",
       choices = {
@@ -235,13 +308,14 @@ return {
         "low",
       },
     },
+    ---@type CodeCompanion.Schema
     temperature = {
       order = 3,
       mapping = "parameters",
       type = "number",
       default = 0,
-      condition = function(schema)
-        local model = schema.model.default
+      condition = function(self)
+        local model = self.schema.model.default
         if type(model) == "function" then
           model = model()
         end
@@ -253,16 +327,17 @@ return {
       order = 4,
       mapping = "parameters",
       type = "integer",
-      default = 4096,
+      default = 15000,
       desc = "The maximum number of tokens to generate in the chat completion. The total length of input tokens and generated tokens is limited by the model's context length.",
     },
+    ---@type CodeCompanion.Schema
     top_p = {
       order = 5,
       mapping = "parameters",
       type = "number",
       default = 1,
-      condition = function(schema)
-        local model = schema.model.default
+      condition = function(self)
+        local model = self.schema.model.default
         if type(model) == "function" then
           model = model()
         end
@@ -270,13 +345,14 @@ return {
       end,
       desc = "An alternative to sampling with temperature, called nucleus sampling, where the model considers the results of the tokens with top_p probability mass. So 0.1 means only the tokens comprising the top 10% probability mass are considered. We generally recommend altering this or temperature but not both.",
     },
+    ---@type CodeCompanion.Schema
     n = {
       order = 6,
       mapping = "parameters",
       type = "number",
       default = 1,
-      condition = function(schema)
-        local model = schema.model.default
+      condition = function(self)
+        local model = self.schema.model.default
         if type(model) == "function" then
           model = model()
         end

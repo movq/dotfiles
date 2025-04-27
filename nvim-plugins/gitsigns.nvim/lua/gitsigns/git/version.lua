@@ -4,11 +4,12 @@ local gs_config = require('gitsigns.config')
 local log = require('gitsigns.debug.log')
 local err = require('gitsigns.message').error
 local system = require('gitsigns.system').system
+local tointeger = require('gitsigns.util').tointeger
 
 local M = {}
 
 --- @type fun(cmd: string[], opts?: vim.SystemOpts): vim.SystemCompleted
-local asystem = async.wrap(3, system)
+local asystem = async.awrap(3, system)
 
 --- @class (exact) Gitsigns.Version
 --- @field major integer
@@ -19,19 +20,22 @@ local asystem = async.wrap(3, system)
 --- @return Gitsigns.Version
 local function parse_version(version)
   assert(version:match('%d+%.%d+%.%w+'), 'Invalid git version: ' .. version)
-  local ret = {}
   local parts = vim.split(version, '%.')
-  ret.major = assert(tonumber(parts[1]))
-  ret.minor = assert(tonumber(parts[2]))
+  --- @cast parts [string, string, string]
 
+  local patch --- @type integer
   if parts[3] == 'GIT' then
-    ret.patch = 0
+    patch = 0
   else
     local patch_ver = vim.split(parts[3], '-')
-    ret.patch = assert(tonumber(patch_ver[1]))
+    patch = assert(tointeger(patch_ver[1]))
   end
 
-  return ret
+  return {
+    patch = patch,
+    major = assert(tointeger(parts[1])),
+    minor = assert(tointeger(parts[2])),
+  }
 end
 
 --- @async
@@ -49,7 +53,7 @@ local function set_version()
 
   --- @type vim.SystemCompleted
   local obj = asystem({ 'git', '--version' })
-  async.scheduler()
+  async.schedule()
 
   local line = vim.split(obj.stdout or '', '\n')[1]
   if not line then
@@ -68,33 +72,29 @@ local function set_version()
   end
 
   local parts = vim.split(line, '%s+')
-  M.version = parse_version(parts[3])
+  M.version = parse_version(assert(parts[3]))
 end
 
 --- @async
 --- Usage: check_version{2,3}
---- @param version {[1]: integer, [2]:integer, [3]:integer}?
+--- @param major? integer
+--- @param minor? integer
+--- @param patch? integer
 --- @return boolean
-function M.check(version)
+function M.check(major, minor, patch)
   if not M.version then
     set_version()
   end
 
   if not M.version then
     return false
-  end
-
-  if not version then
+  elseif not major or not minor then
     return false
-  end
-
-  if M.version.major < version[1] then
+  elseif M.version.major < major then
     return false
-  end
-  if version[2] and M.version.minor < version[2] then
+  elseif minor and M.version.minor < minor then
     return false
-  end
-  if version[3] and M.version.patch < version[3] then
+  elseif patch and M.version.patch < patch then
     return false
   end
   return true

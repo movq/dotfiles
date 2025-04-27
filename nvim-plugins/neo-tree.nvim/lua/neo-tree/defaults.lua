@@ -1,3 +1,4 @@
+---@type neotree.Config.Base
 local config = {
   -- If a user has a sources list it will replace this one.
   -- Only sources listed here will be loaded.
@@ -28,16 +29,17 @@ local config = {
                        -- Anything before this will be used. The last items to be processed are the untracked files.
   },
   hide_root_node = false, -- Hide the root node.
-  retain_hidden_root_indent = false, -- IF the root node is hidden, keep the indentation anyhow. 
+  retain_hidden_root_indent = false, -- IF the root node is hidden, keep the indentation anyhow.
                                      -- This is needed if you use expanders because they render in the indent.
   log_level = "info", -- "trace", "debug", "info", "warn", "error", "fatal"
-  log_to_file = false, -- true, false, "/path/to/file.log", use :NeoTreeLogs to show the file
+  log_to_file = false, -- true, false, "/path/to/file.log", use ':lua require("neo-tree").show_logs()' to show the file
   open_files_in_last_window = true, -- false = open files in top left window
   open_files_do_not_replace_types = { "terminal", "Trouble", "qf", "edgy" }, -- when opening files, do not use windows containing these filetypes or buftypes
+  open_files_using_relative_paths = false,
   -- popup_border_style is for input and confirmation dialogs.
   -- Configurtaion of floating window is done in the individual source sections.
   -- "NC" is a special style that works well with NormalNC set
-  popup_border_style = "NC", -- "double", "none", "rounded", "shadow", "single" or "solid"
+  popup_border_style = "NC", -- "double", "rounded", "single", "solid", (or "" to use 'winborder' on Neovim v0.11+)
   resize_timer_interval = 500, -- in ms, needed for containers to redraw right aligned and faded content
                                -- set to -1 to disable the resize timer entirely
   --                           -- NOTE: this will speed up to 50 ms for 1 second following a resize
@@ -260,14 +262,21 @@ local config = {
       enabled = true,
       width = 20, -- width of the column
       required_width = 88, -- min width of window required to show this column
+      format = "%Y-%m-%d %I:%M %p", -- format string for timestamp (see `:h os.date()`)
+                                    -- or use a function that takes in the date in seconds and returns a string to display
+      --format = require("neo-tree.utils").relative_date, -- enable relative timestamps
     },
     created = {
       enabled = false,
       width = 20, -- width of the column
       required_width = 120, -- min width of window required to show this column
+      format = "%Y-%m-%d %I:%M %p", -- format string for timestamp (see `:h os.date()`)
+                                    -- or use a function that takes in the date in seconds and returns a string to display
+      --format = require("neo-tree.utils").relative_date, -- enable relative timestamps
     },
     symlink_target = {
       enabled = false,
+      text_format = " ➛ %s", -- %s will be replaced with the symlink target's path.
     },
   },
   renderers = {
@@ -385,7 +394,11 @@ local config = {
       ["<cr>"] = "open",
       -- ["<cr>"] = { "open", config = { expand_nested_files = true } }, -- expand nested file takes precedence
       ["<esc>"] = "cancel", -- close preview or floating neo-tree window
-      ["P"] = { "toggle_preview", config = { use_float = true, use_image_nvim = false } },
+      ["P"] = { "toggle_preview", config = {
+        use_float = true,
+        use_image_nvim = false,
+        -- title = "Neo-tree Preview", -- You can define a custom title for the preview floating window.
+      } },
       ["<C-f>"] = { "scroll_preview", config = {direction = -10} },
       ["<C-b>"] = { "scroll_preview", config = {direction = 10} },
       ["l"] = "focus_preview",
@@ -400,8 +413,10 @@ local config = {
       -- ["t"] = "open_tab_drop",
       ["w"] = "open_with_window_picker",
       ["C"] = "close_node",
+      --["C"] = "close_all_subnodes",
       ["z"] = "close_all_nodes",
       --["Z"] = "expand_all_nodes",
+      --["Z"] = "expand_all_subnodes",
       ["R"] = "refresh",
       ["a"] = {
         "add",
@@ -440,7 +455,8 @@ local config = {
         ["."] = "set_root",
         ["[g"] = "prev_git_modified",
         ["]g"] = "next_git_modified",
-        ["i"] = "show_file_details",
+        ["i"] = "show_file_details", -- see `:h neo-tree-file-actions` for options to customize the window.
+        ["b"] = "rename_basename",
         ["o"] = { "show_help", nowait=false, config = { title = "Order by", prefix_key = "o" }},
         ["oc"] = { "order_by_created", nowait = false },
         ["od"] = { "order_by_diagnostics", nowait = false },
@@ -455,6 +471,7 @@ local config = {
         ["<C-n>"] = "move_cursor_down",
         ["<up>"] = "move_cursor_up",
         ["<C-p>"] = "move_cursor_up",
+        ["<esc>"] = "close"
       },
     },
     async_directory_scan = "auto", -- "auto"   means refreshes are async, but it's synchronous when called from the Neotree commands.
@@ -569,8 +586,10 @@ local config = {
       mappings = {
         ["<bs>"] = "navigate_up",
         ["."] = "set_root",
+        ["d"] = "buffer_delete",
         ["bd"] = "buffer_delete",
-        ["i"] = "show_file_details",
+        ["i"] = "show_file_details", -- see `:h neo-tree-file-actions` for options to customize the window.
+        ["b"] = "rename_basename",
         ["o"] = { "show_help", nowait=false, config = { title = "Order by", prefix_key = "o" }},
         ["oc"] = { "order_by_created", nowait = false },
         ["od"] = { "order_by_diagnostics", nowait = false },
@@ -591,7 +610,8 @@ local config = {
         ["gc"] = "git_commit",
         ["gp"] = "git_push",
         ["gg"] = "git_commit_and_push",
-        ["i"] = "show_file_details",
+        ["i"] = "show_file_details", -- see `:h neo-tree-file-actions` for options to customize the window.
+        ["b"] = "rename_basename",
         ["o"] = { "show_help", nowait=false, config = { title = "Order by", prefix_key = "o" }},
         ["oc"] = { "order_by_created", nowait = false },
         ["od"] = { "order_by_diagnostics", nowait = false },

@@ -40,21 +40,6 @@ local function is_auto_create_enabled()
   return result
 end
 
--- get the current git branch name, if any, and only if configured to do so
-local function get_git_branch_name()
-  if not Config.use_git_branch then
-    return ""
-  end
-
-  -- WARN: this assumes you want the branch of the cwd
-  local out = vim.fn.systemlist "git rev-parse --abbrev-ref HEAD"
-  if vim.v.shell_error ~= 0 then
-    Lib.logger.debug(string.format("git failed with: %s", table.concat(out, "\n")))
-    return ""
-  end
-  return out[1]
-end
-
 local in_pager_mode = function()
   return vim.g.in_pager_mode == Lib._VIM_TRUE
 end
@@ -173,7 +158,7 @@ local function suppress_session(session_dir)
 
   -- If session_dir is set, use that otherwise use cwd
   -- session_dir will be set when loading a session from a directory at lauch (i.e. from argv)
-  local cwd = session_dir or vim.fn.getcwd()
+  local cwd = session_dir or vim.fn.getcwd(-1, -1)
 
   if Lib.find_matching_directory(cwd, dirs) then
     Lib.logger.debug "suppress_session found a match, suppressing"
@@ -190,7 +175,7 @@ local function is_allowed_dir()
   end
 
   local dirs = Config.allowed_dirs or {}
-  local cwd = vim.fn.getcwd()
+  local cwd = vim.fn.getcwd(-1, -1)
 
   if Lib.find_matching_directory(cwd, dirs) then
     Lib.logger.debug "is_allowed_dir found a match, allowing"
@@ -209,25 +194,12 @@ end
 ---@return string Returns the escaped version of the name with .vim appended.
 local function get_session_file_name(session_name, legacy)
   if not session_name or session_name == "" then
-    session_name = vim.fn.getcwd()
+    session_name = vim.fn.getcwd(-1, -1)
     Lib.logger.debug("get_session_file_name no session_name, using cwd: " .. session_name)
 
-    local git_branch_name = get_git_branch_name()
-    if git_branch_name and git_branch_name ~= "" then
-      -- NOTE: By including it in the session name, there's the possibility of a collision
-      -- with an actual directory named session_name|branch_name. Meaning, that if someone
-      -- created a session in session_name (while branch_name is checked out) and then also
-      -- went to edit in a directory literally called session_name|branch_name. the sessions
-      -- would collide. Obviously, that's not perfect but I think it's an ok price to pay to
-      -- get branch specific sessions and still have a cwd derived text key to identify sessions
-      -- that can be used everywhere, incuding :SessionRestore
-      if legacy then
-        session_name = session_name .. "_" .. git_branch_name
-      else
-        -- now that we're percent encoding, we can pick a less likely character, even if it doesn't
-        -- avoid the problem entirely
-        session_name = session_name .. "|" .. git_branch_name
-      end
+    if Config.git_use_branch_name then
+      session_name = Lib.combine_session_name_with_git_branch(session_name, Lib.get_git_branch_name(), legacy)
+      Lib.logger.debug("git enabled, session_name:" .. session_name)
     end
   end
 
@@ -279,13 +251,13 @@ end
 ---unless a session for the current working directory exists.
 ---@return boolean True if a session exists for the cwd
 function AutoSession.session_exists_for_cwd()
-  local session_file = get_session_file_name(vim.fn.getcwd())
+  local session_file = get_session_file_name(vim.fn.getcwd(-1, -1))
   if vim.fn.filereadable(AutoSession.get_root_dir() .. session_file) ~= 0 then
     return true
   end
 
   -- Check legacy sessions
-  session_file = get_session_file_name(vim.fn.getcwd(), true)
+  session_file = get_session_file_name(vim.fn.getcwd(-1, -1), true)
   return vim.fn.filereadable(AutoSession.get_root_dir() .. session_file) ~= 0
 end
 
@@ -312,6 +284,11 @@ function AutoSession.AutoSaveSession()
       Lib.logger.debug "Create not enabled and no existing session, not creating session"
       return false
     end
+  end
+
+  if Config.auto_delete_empty_sessions and Lib.only_blank_buffers_left() then
+    AutoSession.DeleteSession(current_session)
+    return false
   end
 
   if Config.close_unsupported_windows then
@@ -454,11 +431,36 @@ function AutoSession.AutoRestoreSession(session_name, is_startup)
 end
 
 ---@private
+---Called at VimEnter to start AutoSession
+---Will call auto_restore_session_at_vim_enter and also purge sessions (if enabled)
+---@return boolean # Was a session restored
+function AutoSession.start()
+  local did_auto_restore = AutoSession.auto_restore_session_at_vim_enter()
+
+  if Config.purge_after_minutes then
+    local work = vim.uv.new_work(Lib.purge_old_sessions, function(purged_sessions_json)
+      vim.schedule(function()
+        local purged_sessions = vim.json.decode(purged_sessions_json)
+        if not vim.tbl_isempty(purged_sessions) then
+          Lib.logger.info(
+            "Deleted old sessions:\n"
+              .. table.concat(vim.tbl_map(Lib.escaped_session_name_to_session_name, purged_sessions), "\n")
+          )
+        end
+      end)
+    end)
+    work:queue(AutoSession.get_root_dir(), Config.purge_after_minutes)
+  end
+
+  return did_auto_restore
+end
+
+---@private
 ---Called at VimEnter (after Lazy is done) to see if we should automatically restore a session
 ---If launched with a single directory parameter and Config.args_allow_single_directory is true, pass
 ---that in as the session_dir. Handles both 'nvim .' and 'nvim some/dir'
 ---Also make sure to call no_restore if no session was restored
----@return boolean Was a session restored
+---@return boolean # Was a session restored
 function AutoSession.auto_restore_session_at_vim_enter()
   -- Save the launch args here as restoring a session will replace vim.fn.argv. We clear
   -- launch_argv in restore session so it's only used for the session launched from the command
@@ -476,13 +478,20 @@ function AutoSession.auto_restore_session_at_vim_enter()
     local session_name = Lib.remove_trailing_separator(vim.fn.fnamemodify(launch_argv[1], ":p"))
     Lib.logger.debug("Launched with single directory, using as session_dir: " .. session_name)
 
+    if Config.git_use_branch_name then
+      -- Get the git branch for that directory, no legacy git name support
+      session_name =
+        Lib.combine_session_name_with_git_branch(session_name, Lib.get_git_branch_name(session_name), false)
+      Lib.logger.debug("git enabled, launch argument with potential git branch: " .. session_name)
+    end
+
     if AutoSession.AutoRestoreSession(session_name, true) then
       return true
     end
 
     -- We failed to load a session for the other directory. Unless session name matches cwd, we don't
     -- want to enable autosaving since it might replace the session for the cwd
-    if vim.fn.getcwd() ~= session_name then
+    if vim.fn.getcwd(-1, -1) ~= session_name then
       Lib.logger.debug "Not enabling autosave because launch argument didn't load session and doesn't match cwd"
       Config.auto_save = false
     end
@@ -671,6 +680,23 @@ function AutoSession.RestoreSessionFromDir(session_dir, session_name, opts)
   return AutoSession.RestoreSessionFile(session_path, opts)
 end
 
+---Handles erorrs on restore. Will ignore fold errors but will pop a notification for all other
+---errors and return false, which will disable auto-save
+---@param error_msg string error message
+---@return boolean enable_auto_save Return false to disable auto-saving, true to leave it on
+local function restore_error_handler(error_msg)
+  -- Ignore fold errors as discussed in https://github.com/rmagatti/auto-session/issues/409
+  if error_msg and string.find(error_msg, "E490: No fold found") then
+    Lib.logger.debug "Ignoring fold error on restore"
+    return true
+  end
+
+  Lib.logger.error([[
+Error restoring session, disabling auto save.
+Error: ]] .. error_msg)
+  return false
+end
+
 ---Restores a session from a specific file
 ---@param session_path string The session file to load
 ---@param opts? RestoreOpts|nil restore options
@@ -708,6 +734,10 @@ function AutoSession.RestoreSessionFile(session_path, opts)
   -- safer to have our own flag as well, in case the vim flag changes
   AutoSession.restore_in_progress = true
 
+  if Config.git_auto_restore_on_branch_change then
+    require("auto-session.git").stop_watcher()
+  end
+
   -- Clear the buffers and jumps
   vim.cmd "silent %bw!"
   vim.cmd "silent clearjumps"
@@ -731,17 +761,25 @@ function AutoSession.RestoreSessionFile(session_path, opts)
   launch_argv = nil
 
   if not success then
-    Lib.logger.error([[
-Error restoring session, disabling auto save.
-Error: ]] .. result)
-    Config.auto_save = false
-    return false
+    if
+      (type(Config.restore_error_handler) == "function" and not Config.restore_error_handler(result))
+      or not restore_error_handler(result)
+    then
+      Lib.logger.debug "Error while restoring, disabling autosave"
+      Config.auto_save = false
+      return false
+    end
   end
 
   local session_name = Lib.escaped_session_name_to_session_name(vim.fn.fnamemodify(session_path, ":t"))
   Lib.logger.debug("Restored session: " .. session_name)
   if opts.show_message == nil or opts.show_message then
     vim.notify("Restored session: " .. session_name)
+  end
+
+  if Config.git_use_branch_name and Config.git_auto_restore_on_branch_change then
+    -- start watching for branch changes
+    require("auto-session.git").start_watcher(vim.fn.getcwd(-1, -1), ".git/HEAD")
   end
 
   AutoSession.run_cmds "post_restore"

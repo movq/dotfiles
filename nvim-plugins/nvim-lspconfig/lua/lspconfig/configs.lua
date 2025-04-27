@@ -1,6 +1,11 @@
+-- This entire module will only be usfeul for Nvim older than 0.11, since vim.lsp.config makes this module obsolete. So
+-- it's easier to just disable all warnings for now and remove this file when it's no longer relevant.
+--- @diagnostic disable: assign-type-mismatch
+--- @diagnostic disable: param-type-mismatch
+
 local util = require 'lspconfig.util'
 local async = require 'lspconfig.async'
-local api, validate, lsp, fn = vim.api, vim.validate, vim.lsp, vim.fn
+local api, lsp, fn = vim.api, vim.lsp, vim.fn
 local tbl_deep_extend = vim.tbl_deep_extend
 
 local configs = {}
@@ -19,29 +24,10 @@ local configs = {}
 --- @field root_dir? string|fun(filename: string, bufnr: number)
 --- @field commands? table<string, lspconfig.Config.command>
 
---- @param cmd any
-local function sanitize_cmd(cmd)
-  if cmd and type(cmd) == 'table' and not vim.tbl_isempty(cmd) then
-    local original = cmd[1]
-    cmd[1] = vim.fn.exepath(cmd[1])
-    if #cmd[1] == 0 then
-      cmd[1] = original
-    end
-  end
-end
-
 ---@param t table
 ---@param config_name string
 ---@param config_def table Config definition read from `lspconfig.configs.<name>`.
 function configs.__newindex(t, config_name, config_def)
-  validate {
-    name = { config_name, 's' },
-    default_config = { config_def.default_config, 't' },
-    on_new_config = { config_def.on_new_config, 'f', true },
-    on_attach = { config_def.on_attach, 'f', true },
-    commands = { config_def.commands, 't', true },
-  }
-
   if config_def.default_config.deprecate then
     vim.deprecate(
       config_name,
@@ -52,16 +38,7 @@ function configs.__newindex(t, config_name, config_def)
     )
   end
 
-  if config_def.commands then
-    for k, v in pairs(config_def.commands) do
-      validate {
-        ['command.name'] = { k, 's' },
-        ['command.fn'] = { v[1], 'f' },
-      }
-    end
-  else
-    config_def.commands = {}
-  end
+  config_def.commands = config_def.commands or {}
 
   local M = {}
 
@@ -74,30 +51,7 @@ function configs.__newindex(t, config_name, config_def)
   function M.setup(user_config)
     local lsp_group = api.nvim_create_augroup('lspconfig', { clear = false })
 
-    validate {
-      cmd = {
-        user_config.cmd,
-        { 'f', 't' },
-        true,
-      },
-      root_dir = { user_config.root_dir, { 's', 'f' }, true },
-      filetypes = { user_config.filetype, 't', true },
-      on_new_config = { user_config.on_new_config, 'f', true },
-      on_attach = { user_config.on_attach, 'f', true },
-      commands = { user_config.commands, 't', true },
-    }
-    if user_config.commands then
-      for k, v in pairs(user_config.commands) do
-        validate {
-          ['command.name'] = { k, 's' },
-          ['command.fn'] = { v[1], 'f' },
-        }
-      end
-    end
-
     local config = tbl_deep_extend('keep', user_config, default_config)
-
-    sanitize_cmd(config.cmd)
 
     if util.on_setup then
       pcall(util.on_setup, config, user_config)
@@ -131,7 +85,7 @@ function configs.__newindex(t, config_name, config_def)
         return
       end
 
-      local pwd = vim.loop.cwd()
+      local pwd = vim.uv.cwd()
 
       async.run(function()
         local root_dir

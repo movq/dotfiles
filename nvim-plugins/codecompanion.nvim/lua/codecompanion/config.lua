@@ -1,5 +1,7 @@
 local fmt = string.format
 
+local default_providers = require("codecompanion.providers.slash_commands")
+
 local constants = {
   LLM_ROLE = "llm",
   USER_ROLE = "user",
@@ -14,7 +16,10 @@ local defaults = {
     copilot = "copilot",
     deepseek = "deepseek",
     gemini = "gemini",
+    githubmodels = "githubmodels",
     huggingface = "huggingface",
+    novita = "novita",
+    mistral = "mistral",
     ollama = "ollama",
     openai = "openai",
     xai = "xai",
@@ -25,7 +30,9 @@ local defaults = {
     -- OPTIONS ----------------------------------------------------------------
     opts = {
       allow_insecure = false, -- Allow insecure connections?
+      cache_models_for = 1800, -- Cache adapter models for this long (seconds)
       proxy = nil, -- [protocol://]host[:port] e.g. socks5://127.0.0.1:9999
+      show_defaults = true, -- Show default adapters
     },
   },
   constants = constants,
@@ -44,67 +51,53 @@ local defaults = {
         ---@type string
         user = "Me",
       },
-      agents = {
-        ["full_stack_dev"] = {
-          description = "Full Stack Developer - Can run code, edit code and modify files",
-          system_prompt = "**DO NOT** make any assumptions about the dependencies that a user has installed. If you need to install any dependencies to fulfil the user's request, do so via the Command Runner tool. If the user doesn't specify a path, use their current working directory.",
-          tools = {
-            "cmd_runner",
-            "editor",
-            "files",
+      tools = {
+        groups = {
+          ["full_stack_dev"] = {
+            description = "Full Stack Developer - Can run code, edit code and modify files",
+            system_prompt = "**DO NOT** make any assumptions about the dependencies that a user has installed. If you need to install any dependencies to fulfil the user's request, do so via the Command Runner tool. If the user doesn't specify a path, use their current working directory.",
+            tools = {
+              "cmd_runner",
+              "editor",
+              "files",
+            },
           },
         },
-        tools = {
-          ["cmd_runner"] = {
-            callback = "strategies.chat.tools.cmd_runner",
-            description = "Run shell commands initiated by the LLM",
-            opts = {
-              user_approval = true,
-            },
-          },
-          ["editor"] = {
-            callback = "strategies.chat.tools.editor",
-            description = "Update a buffer with the LLM's response",
-          },
-          ["files"] = {
-            callback = "strategies.chat.tools.files",
-            description = "Update the file system with the LLM's response",
-            opts = {
-              user_approval = true,
-            },
-          },
-          ["rag"] = {
-            callback = "strategies.chat.tools.rag",
-            description = "Supplement the LLM with real-time info from the internet",
-            opts = {
-              hide_output = true,
-            },
-          },
+        ["cmd_runner"] = {
+          callback = "strategies.chat.agents.tools.cmd_runner",
+          description = "Run shell commands initiated by the LLM",
           opts = {
-            auto_submit_errors = false, -- Send any errors to the LLM automatically?
-            auto_submit_success = false, -- Send any successful output to the LLM automatically?
-            system_prompt = [[## Tools
-
-You now have access to tools:
-- These enable you to assist the user with specific tasks
-- The user will outline which specific tools you have access to
-- You trigger a tool by following a specific XML schema which is defined for each tool
-
-You must:
-- Only use the tool when prompted by the user, despite having access to it
-- Follow the specific tool's schema
-- Respond with the schema in XML format
-- Ensure the schema is in a markdown code block that is designated as XML
-- Ensure any output you're intending to execute will be able to parsed as valid XML
-
-Points to note:
-- The user detects that you've triggered a tool by using Tree-sitter to parse your markdown response
-- If you call multiple tools within the same response:
-  - Each unique tool MUST be called in its own, individual, XML codeblock
-  - Tools of the same type SHOULD be called in the same XML codeblock
-- If your response doesn't follow the tool's schema, the tool will not execute
-- Tools should not alter your core tasks and how you respond to a user]],
+            requires_approval = true,
           },
+        },
+        ["editor"] = {
+          callback = "strategies.chat.agents.tools.editor",
+          description = "Update a buffer with the LLM's response",
+        },
+        ["files"] = {
+          callback = "strategies.chat.agents.tools.files",
+          description = "Update the file system with the LLM's response",
+          opts = {
+            requires_approval = true,
+          },
+        },
+        opts = {
+          auto_submit_errors = false, -- Send any errors to the LLM automatically?
+          auto_submit_success = false, -- Send any successful output to the LLM automatically?
+          system_prompt = [[## Tools Access and Execution Guidelines
+
+### Overview
+You now have access to specialized tools that empower you to assist users with specific tasks. These tools are available only when explicitly requested by the user.
+
+### General Rules
+- **User-Triggered:** Only use a tool when the user explicitly indicates that a specific tool should be employed (e.g., phrases like "run command" for the cmd_runner).
+- **Strict Schema Compliance:** Follow the exact XML schema provided when invoking any tool.
+- **XML Format:** Always wrap your responses in a markdown code block designated as XML and within the `<tools></tools>` tags.
+- **Valid XML Required:** Ensure that the constructed XML is valid and well-formed.
+- **Multiple Commands:**
+  - If issuing commands of the same type, combine them within one `<tools></tools>` XML block with separate `<action></action>` entries.
+  - If issuing commands for different tools, ensure they're wrapped in `<tool></tool>` tags within the `<tools></tools>` block.
+- **No Side Effects:** Tool invocations should not alter your core tasks or the general conversation structure.]],
         },
       },
       variables = {
@@ -137,7 +130,7 @@ Points to note:
           description = "Insert open buffers",
           opts = {
             contains_code = true,
-            provider = "default", -- default|telescope|mini_pick|fzf_lua
+            provider = default_providers.pick_provider, -- default|telescope|mini_pick|fzf_lua|snacks
           },
         },
         ["fetch"] = {
@@ -153,7 +146,7 @@ Points to note:
           opts = {
             contains_code = true,
             max_lines = 1000,
-            provider = "default", -- default|telescope|mini_pick|fzf_lua
+            provider = default_providers.pick_provider, -- default|telescope|mini_pick|fzf_lua|snacks
           },
         },
         ["help"] = {
@@ -162,7 +155,7 @@ Points to note:
           opts = {
             contains_code = false,
             max_lines = 128, -- Maximum amount of lines to of the help file to send (NOTE: Each vimdoc line is typically 10 tokens)
-            provider = "telescope", -- telescope|mini_pick|fzf_lua
+            provider = default_providers.help_provider, -- telescope|mini_pick|fzf_lua|snacks
           },
         },
         ["now"] = {
@@ -177,7 +170,7 @@ Points to note:
           description = "Insert symbols for a selected file",
           opts = {
             contains_code = true,
-            provider = "default", -- default|telescope|mini_pick|fzf_lua
+            provider = default_providers.pick_provider, -- default|telescope|mini_pick|fzf_lua|snacks
           },
         },
         ["terminal"] = {
@@ -350,6 +343,14 @@ Points to note:
           callback = "keymaps.toggle_system_prompt",
           description = "Toggle the system prompt",
         },
+        auto_tool_mode = {
+          modes = {
+            n = "gta",
+          },
+          index = 18,
+          callback = "keymaps.auto_tool_mode",
+          description = "Toggle automatic tool mode",
+        },
       },
       opts = {
         register = "+", -- The register to use for yanking code
@@ -377,14 +378,28 @@ Points to note:
           description = "Reject change",
         },
       },
-      prompts = {
-        -- The prompt to send to the LLM when a user initiates the inline strategy and it needs to convert to a chat
-        inline_to_chat = function(context)
-          return fmt(
-            [[I want you to act as an expert and senior developer in the %s language. I will ask you questions, perhaps giving you code examples, and I want you to advise me with explanations and code where necessary.]],
-            context.filetype
-          )
-        end,
+      variables = {
+        ["buffer"] = {
+          callback = "strategies.inline.variables.buffer",
+          description = "Share the current buffer with the LLM",
+          opts = {
+            contains_code = true,
+          },
+        },
+        ["chat"] = {
+          callback = "strategies.inline.variables.chat",
+          description = "Share the currently open chat buffer with the LLM",
+          opts = {
+            contains_code = true,
+          },
+        },
+        ["clipboard"] = {
+          callback = "strategies.inline.variables.clipboard",
+          description = "Share the contents of the clipboard with the LLM",
+          opts = {
+            contains_code = true,
+          },
+        },
       },
     },
     -- CMD STRATEGY -----------------------------------------------------------
@@ -435,7 +450,7 @@ Points to note:
       opts = {
         index = 4,
         is_default = true,
-        short_name = "workflow",
+        short_name = "cw",
       },
       prompts = {
         {
@@ -483,11 +498,64 @@ Points to note:
         },
       },
     },
+    ["Edit<->Test workflow"] = {
+      strategy = "workflow",
+      description = "Use a workflow to repeatedly edit then test code",
+      opts = {
+        index = 5,
+        is_default = true,
+        short_name = "et",
+      },
+      prompts = {
+        {
+          {
+            name = "Setup Test",
+            role = constants.USER_ROLE,
+            opts = { auto_submit = false },
+            content = function()
+              -- Enable turbo mode!!!
+              vim.g.codecompanion_auto_tool_mode = true
+
+              return [[### Instructions
+
+Your instructions here
+
+### Steps to Follow
+
+You are required to write code following the instructions provided above and test the correctness by running the designated test suite. Follow these steps exactly:
+
+1. Update the code in #buffer{watch} using the @editor tool
+2. Then use the @cmd_runner tool to run the test suite with `<test_cmd>` (do this after you have updated the code)
+3. Make sure you trigger both tools in the same response
+
+We'll repeat this cycle until the tests pass. Ensure no deviations from these steps.]]
+            end,
+          },
+        },
+        {
+          {
+            name = "Repeat On Failure",
+            role = constants.USER_ROLE,
+            opts = { auto_submit = true },
+            -- Scope this prompt to the cmd_runner tool
+            condition = function()
+              return _G.codecompanion_current_tool == "cmd_runner"
+            end,
+            -- Repeat until the tests pass, as indicated by the testing flag
+            -- which the cmd_runner tool sets on the chat buffer
+            repeat_until = function(chat)
+              return chat.tool_flags.testing == true
+            end,
+            content = "The tests have failed. Can you edit the buffer and run the test suite again?",
+          },
+        },
+      },
+    },
     ["Explain"] = {
       strategy = "chat",
       description = "Explain how code in a buffer works",
       opts = {
-        index = 5,
+        index = 6,
         is_default = true,
         is_slash_cmd = false,
         modes = { "v" },
@@ -534,16 +602,17 @@ Points to note:
       },
     },
     ["Unit Tests"] = {
-      strategy = "chat",
+      strategy = "inline",
       description = "Generate unit tests for the selected code",
       opts = {
-        index = 6,
+        index = 7,
         is_default = true,
         is_slash_cmd = false,
         modes = { "v" },
         short_name = "tests",
         auto_submit = true,
         user_prompt = false,
+        placement = "new",
         stop_context_insertion = true,
       },
       prompts = {
@@ -570,11 +639,13 @@ Points to note:
             local code = require("codecompanion.helpers.actions").get_code(context.start_line, context.end_line)
 
             return fmt(
-              [[Please generate unit tests for this code from buffer %d:
+              [[<user_prompt>
+Please generate unit tests for this code from buffer %d:
 
 ```%s
 %s
 ```
+</user_prompt>
 ]],
               context.bufnr,
               context.filetype,
@@ -591,7 +662,7 @@ Points to note:
       strategy = "chat",
       description = "Fix the selected code",
       opts = {
-        index = 7,
+        index = 8,
         is_default = true,
         is_slash_cmd = false,
         modes = { "v" },
@@ -641,74 +712,6 @@ Use Markdown formatting and include the programming language name at the start o
           end,
           opts = {
             contains_code = true,
-          },
-        },
-      },
-    },
-    ["Buffer selection"] = {
-      strategy = "inline",
-      description = "Send the current buffer to the LLM as part of an inline prompt",
-      opts = {
-        index = 8,
-        modes = { "v" },
-        is_default = true,
-        is_slash_cmd = false,
-        short_name = "buffer",
-        auto_submit = true,
-        user_prompt = true,
-        stop_context_insertion = true,
-      },
-      prompts = {
-        {
-          role = constants.USER_ROLE,
-          content = function(context)
-            local buf_utils = require("codecompanion.utils.buffers")
-
-            return fmt(
-              [[Here is the content of a buffer, for context:
-
-```%s
-%s
-```
-
-NOTE: The cursor is currently on line %d, which is `%s`.
-
-
-]],
-              context.filetype,
-              buf_utils.get_content(context.bufnr),
-              context.cursor_pos[1],
-              vim.trim(buf_utils.get_line(context.bufnr, context.cursor_pos[1]))
-            )
-          end,
-          opts = {
-            contains_code = true,
-            visible = false,
-          },
-        },
-        {
-          role = constants.USER_ROLE,
-          condition = function(context)
-            return context.is_visual
-          end,
-          content = function(context)
-            local selection = require("codecompanion.helpers.actions").get_code(context.start_line, context.end_line)
-
-            return fmt(
-              [[And this is some code that relates to my question:
-
-```%s
-%s
-```
-]],
-              context.filetype,
-              selection
-            )
-          end,
-          opts = {
-            contains_code = true,
-            visible = true,
-            tag = "visual",
           },
         },
       },
@@ -826,6 +829,76 @@ This is the code, for context:
         },
       },
     },
+    ["Workspace File"] = {
+      strategy = "chat",
+      description = "Generate a Workspace file/group",
+      opts = {
+        index = 11,
+        ignore_system_prompt = true,
+        is_default = true,
+        short_name = "workspace",
+      },
+      references = {
+        {
+          type = "file",
+          path = {
+            vim.fs.joinpath(vim.fn.getcwd(), "codecompanion-workspace.json"),
+          },
+        },
+      },
+      prompts = {
+        {
+          role = constants.SYSTEM_ROLE,
+          opts = { visible = false },
+          content = function()
+            local schema = require("codecompanion").workspace_schema()
+            return fmt(
+              [[## CONTEXT
+
+A workspace is a JSON configuration file that organizes your codebase into related groups to help LLMs understand your project structure. Each group contains files, symbols, or URLs that provide context about specific functionality or features.
+
+The workspace file follows this structure:
+
+```json
+%s
+```
+
+## OBJECTIVE
+
+Create or modify a workspace file that effectively organizes the user's codebase to provide optimal context for LLM interactions.
+
+## RESPONSE
+
+You must create or modify a workspace file through a series of prompts over multiple turns:
+
+1. First, ask the user about the project's overall purpose and structure if not already known
+2. Then ask the user to identify key functional groups in your codebase
+3. For each group, ask the user select relevant files, symbols, or URLs to include. Or, use your own knowledge to identify them
+4. Generate the workspace JSON structure based on the input
+5. Review and refine the workspace configuration together with the user]],
+              schema
+            )
+          end,
+        },
+        {
+          role = constants.USER_ROLE,
+          content = function()
+            local prompt = ""
+            if vim.fn.filereadable(vim.fs.joinpath(vim.fn.getcwd(), "codecompanion-workspace.json")) == 1 then
+              prompt = [[Can you help me add a group to an existing workspace file?]]
+            else
+              prompt = [[Can you help me create a workspace file?]]
+            end
+
+            local ok, _ = pcall(require, "vectorcode")
+            if ok then
+              prompt = prompt .. " Use the @vectorcode tool to help identify groupings of files"
+            end
+            return prompt
+          end,
+        },
+      },
+    },
   },
   -- DISPLAY OPTIONS ----------------------------------------------------------
   display = {
@@ -833,7 +906,7 @@ This is the code, for context:
       width = 95,
       height = 10,
       prompt = "Prompt ", -- Prompt used for interactive LLM calls
-      provider = "default", -- default|telescope|mini_pick
+      provider = default_providers.action_palette_provider, -- default|telescope|mini_pick
       opts = {
         show_default_actions = true, -- Show the default actions in the action palette?
         show_default_prompt_library = true, -- Show the default prompt library in the action palette?
@@ -857,6 +930,7 @@ This is the code, for context:
         height = 0.8,
         width = 0.45,
         relative = "editor",
+        full_height = true,
         opts = {
           breakindent = true,
           cursorcolumn = false,
@@ -870,6 +944,7 @@ This is the code, for context:
           wrap = true,
         },
       },
+      auto_scroll = true, -- Automatically scroll down and place the cursor at the end
       intro_message = "Welcome to CodeCompanion ✨! Press ? for options",
 
       show_header_separator = false, -- Show header separators in the chat buffer? Set this to false if you're using an external markdown formatting plugin
@@ -890,8 +965,16 @@ This is the code, for context:
       enabled = true,
       close_chat_at = 240, -- Close an open chat buffer if the total columns of your display are less than...
       layout = "vertical", -- vertical|horizontal split for default provider
-      opts = { "internal", "filler", "closeoff", "algorithm:patience", "followwrap", "linematch:120" },
-      provider = "default", -- default|mini_diff
+      opts = {
+        "internal",
+        "filler",
+        "closeoff",
+        "algorithm:histogram", -- https://adamj.eu/tech/2024/01/18/git-improve-diff-histogram/
+        "indent-heuristic", -- https://blog.k-nut.eu/better-git-diffs
+        "followwrap",
+        "linematch:120",
+      },
+      provider = default_providers.diff_provider, -- default|mini_diff
     },
     inline = {
       -- If the inline prompt creates a new buffer, how should we display this?
@@ -910,6 +993,9 @@ This is the code, for context:
     ---@return boolean
     send_code = true,
 
+    job_start_delay = 1500, -- Delay in milliseconds between cmd tools
+    submit_delay = 2000, -- Delay in milliseconds before auto-submitting the chat buffer
+
     ---This is the default prompt which is sent with every request in the chat
     ---strategy. It is primarily based on the GitHub Copilot Chat's prompt
     ---but with some modifications. You can choose to remove this via
@@ -919,8 +1005,7 @@ This is the code, for context:
     system_prompt = function(opts)
       local language = opts.language or "English"
       return string.format(
-        [[You are an AI programming assistant named "CodeCompanion".
-You are currently plugged in to the Neovim text editor on a user's machine.
+        [[You are an AI programming assistant named "CodeCompanion". You are currently plugged into the Neovim text editor on a user's machine.
 
 Your core tasks include:
 - Answering general programming questions.
@@ -936,22 +1021,22 @@ Your core tasks include:
 
 You must:
 - Follow the user's requirements carefully and to the letter.
-- Keep your answers short and impersonal, especially if the user responds with context outside of your tasks.
-- Minimize other prose.
+- Keep your answers short and impersonal, especially if the user's context is outside your core tasks.
+- Minimize additional prose unless clarification is needed.
 - Use Markdown formatting in your answers.
-- Include the programming language name at the start of the Markdown code blocks.
+- Include the programming language name at the start of each Markdown code block.
 - Avoid including line numbers in code blocks.
 - Avoid wrapping the whole response in triple backticks.
-- Only return code that's relevant to the task at hand. You may not need to return all of the code that the user has shared.
-- Use actual line breaks instead of '\n' in your response to begin new lines.
-- Use '\n' only when you want a literal backslash followed by a character 'n'.
-- All non-code responses must be in %s.
+- Only return code that's directly relevant to the task at hand. You may omit code that isn’t necessary for the solution.
+- Avoid using H1 and H2 headers in your responses.
+- Use actual line breaks in your responses; only use "\n" when you want a literal backslash followed by 'n'.
+- All non-code text responses must be written in the %s language indicated.
 
 When given a task:
-1. Think step-by-step and describe your plan for what to build in pseudocode, written out in great detail, unless asked not to do so.
-2. Output the code in a single code block, being careful to only return relevant code.
-3. You should always generate short suggestions for the next user turns that are relevant to the conversation.
-4. You can only give one reply for each conversation turn.]],
+1. Think step-by-step and, unless the user requests otherwise or the task is very simple, describe your plan in detailed pseudocode.
+2. Output the final code in a single code block, ensuring that only relevant code is included.
+3. End your response with a short suggestion for the next user turn that directly supports continuing the conversation.
+4. Provide exactly one complete reply per conversation turn.]],
         language
       )
     end,

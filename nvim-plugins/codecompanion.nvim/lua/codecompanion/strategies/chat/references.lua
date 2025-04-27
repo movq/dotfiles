@@ -4,6 +4,7 @@ Slash Commands or variables. References are displayed back to the user via
 the chat buffer, using block quotes and lists.
 --]]
 local config = require("codecompanion.config")
+local helpers = require("codecompanion.strategies.chat.helpers")
 
 local api = vim.api
 local user_role = config.strategies.chat.roles.user
@@ -58,7 +59,9 @@ local function ts_parse_buffer(chat)
     end
   end
 
-  if role_node and role == chat.ui:format_header(user_role) then
+  role = helpers.format_role(role)
+
+  if role_node and role == user_role then
     local start_row, _, end_row, _ = role_node:range()
     return {
       capture = "role",
@@ -75,6 +78,9 @@ end
 ---@param ref CodeCompanion.Chat.Ref
 ---@param row integer
 local function add(chat, ref, row)
+  if not ref.opts.visible then
+    return
+  end
   local lines = {}
 
   table.insert(lines, string.format("> - %s", ref.id))
@@ -118,6 +124,11 @@ function References:add(ref)
     -- Ensure both properties exist with defaults
     ref.opts.pinned = ref.opts.pinned or false
     ref.opts.watched = ref.opts.watched or false
+    ref.opts.visible = ref.opts.visible
+
+    if ref.opts.visible == nil then
+      ref.opts.visible = config.display.chat.show_references
+    end
     table.insert(self.Chat.refs, ref)
     -- If it's a buffer reference and it's being watched, start watching
     if ref.bufnr and ref.opts.watched then
@@ -133,7 +144,7 @@ function References:add(ref)
       add(self.Chat, ref, parsed_buffer.end_row - 1)
     -- If there are no references then add a new block below the heading
     elseif parsed_buffer.capture == "role" then
-      add(self.Chat, ref, parsed_buffer.end_row)
+      add(self.Chat, ref, parsed_buffer.end_row + 1)
     end
   end
 end
@@ -247,8 +258,8 @@ function References:get_from_chat()
 
   for id, node in query:iter_captures(root, chat.bufnr, chat.header_line - 1, -1) do
     if query.captures[id] == "role" then
-      role = vim.treesitter.get_node_text(node, chat.bufnr)
-    elseif role == chat.ui:format_header(user_role) and query.captures[id] == "ref" then
+      role = helpers.format_role(vim.treesitter.get_node_text(node, chat.bufnr))
+    elseif role == user_role and query.captures[id] == "ref" then
       local ref = vim.treesitter.get_node_text(node, chat.bufnr)
       -- Clean both pinned and watched icons
       ref = vim.iter(vim.tbl_values(icons)):fold(select(1, ref:gsub("^> %- ", "")), function(acc, icon)

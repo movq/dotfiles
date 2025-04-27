@@ -18,6 +18,11 @@ return {
     text = true,
     vision = true,
   },
+  opts = {
+    stream = true,
+    cache_breakpoints = 4, -- Cache up to this many messages
+    cache_over = 300, -- Cache any message which has this many tokens or more
+  },
   url = "https://api.anthropic.com/v1/messages",
   env = {
     api_key = "ANTHROPIC_API_KEY",
@@ -28,21 +33,46 @@ return {
     ["anthropic-version"] = "2023-06-01",
     ["anthropic-beta"] = "prompt-caching-2024-07-31",
   },
-  parameters = {
-    stream = true,
-  },
-  opts = {
-    stream = true, -- NOTE: Currently, CodeCompanion ONLY supports streaming with this adapter
-    cache_breakpoints = 4, -- Cache up to this many messages
-    cache_over = 300, -- Cache any message which has this many tokens or more
-  },
+  temp = {},
   handlers = {
+    ---@param self CodeCompanion.Adapter
+    ---@return boolean
+    setup = function(self)
+      if self.opts and self.opts.stream then
+        self.parameters.stream = true
+      end
+
+      -- Add the extended output header if enabled
+      if self.temp.extended_output then
+        self.headers["anthropic-beta"] = (self.headers["anthropic-beta"] .. "," or "") .. "output-128k-2025-02-19"
+      end
+
+      -- Make sure the individual model options are set
+      local model = self.schema.model.default
+      local model_opts = self.schema.model.choices[model]
+      if model_opts and model_opts.opts then
+        self.opts = vim.tbl_deep_extend("force", self.opts, model_opts.opts)
+      end
+
+      return true
+    end,
+
     ---Set the parameters
     ---@param self CodeCompanion.Adapter
     ---@param params table
     ---@param messages table
     ---@return table
     form_parameters = function(self, params, messages)
+      if self.temp.extended_thinking and self.temp.thinking_budget then
+        params.thinking = {
+          type = "enabled",
+          budget_tokens = self.temp.thinking_budget,
+        }
+      end
+      if self.temp.extended_thinking then
+        params.temperature = 1
+      end
+
       return params
     end,
 
@@ -116,11 +146,15 @@ return {
 
     ---Returns the number of tokens generated from the LLM
     ---@param self CodeCompanion.Adapter
-    ---@param data string The data from the LLM
+    ---@param data table The data from the LLM
     ---@return number|nil
     tokens = function(self, data)
       if data then
-        data = data:sub(6)
+        if self.opts.stream then
+          data = utils.clean_streamed_data(data)
+        else
+          data = data.body
+        end
         local ok, json = pcall(vim.json.decode, data)
 
         if ok then
@@ -129,9 +163,10 @@ return {
               + (json.message.usage.cache_creation_input_tokens or 0)
 
             output_tokens = json.message.usage.output_tokens or 0
-          end
-          if json.type == "message_delta" then
+          elseif json.type == "message_delta" then
             return (input_tokens + output_tokens + json.usage.output_tokens)
+          elseif json.type == "message" then
+            return (json.usage.input_tokens + json.usage.output_tokens)
           end
         end
       end
@@ -139,27 +174,43 @@ return {
 
     ---Output the data from the API ready for insertion into the chat buffer
     ---@param self CodeCompanion.Adapter
-    ---@param data string The streamed JSON data from the API, also formatted by the format_data handler
+    ---@param data table The streamed JSON data from the API, also formatted by the format_data handler
     ---@return table|nil
     chat_output = function(self, data)
       local output = {}
 
-      -- Skip the event messages
-      if type(data) == "string" and string.sub(data, 1, 6) == "event:" then
-        return
+      if self.opts.stream then
+        if type(data) == "string" and string.sub(data, 1, 6) == "event:" then
+          return
+        end
       end
 
       if data and data ~= "" then
-        local data_mod = utils.clean_streamed_data(data)
-        local ok, json = pcall(vim.json.decode, data_mod, { luanil = { object = true } })
+        if self.opts.stream then
+          data = utils.clean_streamed_data(data)
+        else
+          data = data.body
+        end
+
+        local ok, json = pcall(vim.json.decode, data, { luanil = { object = true } })
 
         if ok then
           if json.type == "message_start" then
             output.role = json.message.role
             output.content = ""
+          elseif json.type == "content_block_start" then
+            if json.content_block.type == "thinking" then
+              output.reasoning = ""
+            end
           elseif json.type == "content_block_delta" then
-            output.role = nil
-            output.content = json.delta.text
+            if json.delta.type == "thinking_delta" then
+              output.reasoning = json.delta.thinking
+            else
+              output.content = json.delta.text
+            end
+          elseif json.type == "message" then
+            output.role = json.role
+            output.content = json.content[1].text
           end
 
           return {
@@ -173,20 +224,27 @@ return {
     ---Output the data from the API ready for inlining into the current buffer
     ---@param self CodeCompanion.Adapter
     ---@param data table The streamed JSON data from the API, also formatted by the format_data handler
-    ---@param context table Useful context about the buffer to inline to
+    ---@param context? table Useful context about the buffer to inline to
     ---@return table|nil
     inline_output = function(self, data, context)
-      if type(data) == "string" and string.sub(data, 1, 6) == "event:" then
-        return
+      if self.opts.stream then
+        return log:error("Inline output is not supported for non-streaming models")
       end
 
       if data and data ~= "" then
-        data = data:sub(6)
-        local ok, json = pcall(vim.json.decode, data, { luanil = { object = true } })
+        local ok, json = pcall(vim.json.decode, data.body, { luanil = { object = true } })
+
+        if not ok then
+          log:error("Error decoding JSON: %s", data.body)
+          return { status = "error", output = json }
+        end
 
         if ok then
-          if json.type == "content_block_delta" then
-            return json.delta.text
+          if json.type == "message" then
+            if json.content[2] then
+              return { status = "success", output = json.content[2].text }
+            end
+            return { status = "success", output = json.content[1].text }
           end
         end
       end
@@ -194,41 +252,116 @@ return {
 
     ---Function to run when the request has completed. Useful to catch errors
     ---@param self CodeCompanion.Adapter
-    ---@param data table
+    ---@param data? table
     ---@return nil
     on_exit = function(self, data)
-      if data.status >= 400 then
+      if data and data.status >= 400 then
         log:error("Error %s: %s", data.status, data.body)
       end
     end,
   },
   schema = {
+    ---@type CodeCompanion.Schema
     model = {
       order = 1,
       mapping = "parameters",
       type = "enum",
       desc = "The model that will complete your prompt. See https://docs.anthropic.com/claude/docs/models-overview for additional details and options.",
-      default = "claude-3-5-sonnet-20241022",
+      default = "claude-3-7-sonnet-20250219",
       choices = {
+        ["claude-3-7-sonnet-20250219"] = { opts = { can_reason = true } },
         "claude-3-5-sonnet-20241022",
         "claude-3-5-haiku-20241022",
         "claude-3-opus-20240229",
         "claude-2.1",
       },
     },
-    max_tokens = {
+    ---@type CodeCompanion.Schema
+    extended_output = {
       order = 2,
+      mapping = "temp",
+      type = "boolean",
+      optional = true,
+      default = false,
+      desc = "Enable larger output context (128k tokens). Only available with claude-3-7-sonnet-20250219.",
+      condition = function(self)
+        local model = self.schema.model.default
+        if self.schema.model.choices[model] and self.schema.model.choices[model].opts then
+          return self.schema.model.choices[model].opts.can_reason
+        end
+        return false
+      end,
+    },
+    ---@type CodeCompanion.Schema
+    extended_thinking = {
+      order = 3,
+      mapping = "temp",
+      type = "boolean",
+      optional = true,
+      desc = "Enable extended thinking for more thorough reasoning. Requires thinking_budget to be set.",
+      default = function(self)
+        local model = self.schema.model
+        if
+          model.choices[model.default]
+          and model.choices[model.default].opts
+          and model.choices[model.default].opts.can_reason == true
+        then
+          return true
+        end
+        return false
+      end,
+      condition = function(self)
+        local model = self.schema.model.default
+        if self.schema.model.choices[model] and self.schema.model.choices[model].opts then
+          return self.schema.model.choices[model].opts.can_reason
+        end
+        return false
+      end,
+    },
+    ---@type CodeCompanion.Schema
+    thinking_budget = {
+      order = 4,
+      mapping = "temp",
+      type = "number",
+      optional = true,
+      default = 16000,
+      desc = "The maximum number of tokens to use for thinking when extended_thinking is enabled. Must be less than max_tokens.",
+      validate = function(n)
+        return n > 0, "Must be greater than 0"
+      end,
+      condition = function(self)
+        local model = self.schema.model.default
+        if self.schema.model.choices[model] and self.schema.model.choices[model].opts then
+          return self.schema.model.choices[model].opts.can_reason
+        end
+        return false
+      end,
+    },
+    ---@type CodeCompanion.Schema
+    max_tokens = {
+      order = 5,
       mapping = "parameters",
       type = "number",
       optional = true,
-      default = 4096,
+      default = function(self)
+        local model = self.schema.model.default
+        if
+          self.schema.model.choices[model]
+          and self.schema.model.choices[model].opts
+          and self.schema.model.choices[model].opts.can_reason
+        then
+          return self.schema.thinking_budget.default + 1000
+        end
+        return 4096
+      end,
       desc = "The maximum number of tokens to generate before stopping. This parameter only specifies the absolute maximum number of tokens to generate. Different models have different maximum values for this parameter.",
       validate = function(n)
-        return n > 0 and n <= 8192, "Must be between 0 and 8192"
+        return n > 0 and n <= 128000, "Must be between 0 and 128000"
       end,
     },
+    ---@type CodeCompanion.Schema
     temperature = {
-      order = 3,
+      order = 6,
       mapping = "parameters",
       type = "number",
       optional = true,
@@ -238,8 +371,9 @@ return {
         return n >= 0 and n <= 1, "Must be between 0 and 1.0"
       end,
     },
+    ---@type CodeCompanion.Schema
     top_p = {
-      order = 4,
+      order = 7,
       mapping = "parameters",
       type = "number",
       optional = true,
@@ -249,19 +383,21 @@ return {
         return n >= 0 and n <= 1, "Must be between 0 and 1"
       end,
     },
+    ---@type CodeCompanion.Schema
     top_k = {
-      order = 5,
+      order = 8,
       mapping = "parameters",
       type = "number",
       optional = true,
       default = nil,
       desc = "Only sample from the top K options for each subsequent token. Use top_k to remove long tail low probability responses",
       validate = function(n)
-        return n >= 0 and n <= 500, "Must be between 0 and 500"
+        return n >= 0, "Must be greater than 0"
       end,
     },
+    ---@type CodeCompanion.Schema
     stop_sequences = {
-      order = 6,
+      order = 9,
       mapping = "parameters",
       type = "list",
       optional = true,
