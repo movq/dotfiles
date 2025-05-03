@@ -226,164 +226,17 @@ require("nvim-treesitter.configs").setup({
 		"vim",
 		"yaml",
 	},
+    sync_install = true,
+    auto_install = false,
 	highlight = {
 		enable = true,
 		additional_vim_regex_highlighting = false,
 	},
 })
 
----------------------------------------------------------------------------------------------------
-
-local nvim_lsp = require("lspconfig")
-
-vim.api.nvim_create_autocmd('LspAttach', {
-  callback = function(args)
-    local bufmap = function(mode, lhs, rhs)
-      local opts = {buffer = true, noremap = true, silent = true}
-      vim.keymap.set(mode, lhs, rhs, opts)
-    end
-	-- See `:help vim.lsp.*` for documentation on any of the below functions
-	bufmap("n", "gD", "<cmd>lua vim.lsp.buf.declaration()<CR>", opts)
-	bufmap("n", "gd", "<cmd>lua vim.lsp.buf.definition()<CR>", opts)
-	bufmap("n", "k", "<cmd>lua vim.lsp.buf.hover()<CR>", opts)
-	bufmap("n", "gi", "<cmd>lua vim.lsp.buf.implementation()<CR>", opts)
-	bufmap("i", "<C-p>", "<cmd>lua vim.lsp.buf.signature_help()<CR>", opts)
-	bufmap("n", "<space>D", "<cmd>lua vim.lsp.buf.type_definition()<CR>", opts)
-	bufmap("n", "<space>rn", "<cmd>lua vim.lsp.buf.rename()<CR>", opts)
-	bufmap("n", "<space>ca", "<cmd>lua vim.lsp.buf.code_action()<CR>", opts)
-	bufmap("n", "gr", "<cmd>lua vim.lsp.buf.references()<CR>", opts)
-	bufmap("n", "<space>e", "<cmd>lua vim.diagnostic.open_float()<CR>", opts)
-	bufmap("n", "[d", "<cmd>lua vim.diagnostic.goto_prev()<CR>", opts)
-	bufmap("n", "]d", "<cmd>lua vim.diagnostic.goto_next()<CR>", opts)
-	-- bufmap("n", "<space>q", "<cmd>lua vim.diagnostic.set_loclist()<CR>", opts)
-	bufmap("n", "<space>ff", "<cmd>lua vim.lsp.buf.formatting()<CR>", opts)
-	bufmap("n", "<space>fr", "<cmd>lua vim.lsp.buf.range_formatting()<CR>", opts)
-end
-})
-
-local capabilities = require("cmp_nvim_lsp").default_capabilities()
-
--- require("clangd_extensions").setup({
-nvim_lsp["clangd"].setup({
-	server = {
-		cmd = { "clangd", "--background-index", "--clang-tidy", "--completion-style=detailed" },
-		capabilities = capabilities,
-	},
-})
-
-nvim_lsp["gopls"].setup({
-	capabilities = capabilities,
-})
-
-nvim_lsp["hls"].setup({
-	capabilities = capabilities,
-})
-
-nvim_lsp["nil_ls"].setup({
-    capabilities = capabilities,
-})
-
-nvim_lsp["pyright"].setup({
-	before_init = function(params)
-		params.processId = vim.NIL
-	end,
-	cmd = { "pyright-langserver", "--stdio" },
-	capabilities = capabilities,
-})
-
-nvim_lsp["rust_analyzer"].setup({})
-
--- require("rust-tools").setup({
--- 	server = {
--- 		capabilities = capabilities,
--- 	},
--- })
-
-nvim_lsp["ts_ls"].setup({
-	cmd = {
-		"typescript-language-server",
-		"--stdio",
-	},
-	capabilities = capabilities,
-	settings = {
-		completions = {
-			completeFunctionCalls = true,
-		},
-	},
-	init_options = {
-		preferences = {
-			includeCompletionsWithSnippetText = true,
-			includeCompletionsForImportStatements = true,
-		},
-	},
-})
-
--- Lua LSP stuff
-local runtime_path = vim.split(package.path, ";")
-table.insert(runtime_path, "lua/?.lua")
-table.insert(runtime_path, "lua/?/init.lua")
-nvim_lsp["lua_ls"].setup({
-	cmd = { "lua-language-server" },
-	settings = {
-		Lua = {
-			runtime = {
-				-- Tell the language server which version of Lua you're using (most likely LuaJIT in the case of Neovim)
-				version = "LuaJIT",
-				-- Setup your lua path
-				path = runtime_path,
-			},
-			diagnostics = {
-				-- Get the language server to recognize the `vim` global
-				globals = { "vim" },
-			},
-			workspace = {
-				-- Make the server aware of Neovim runtime files
-				library = vim.api.nvim_get_runtime_file("", true),
-			},
-			-- Do not send telemetry data.
-			telemetry = {
-				enable = false,
-			},
-			completion = {
-				callSnippet = "Replace",
-			},
-		},
-	},
-	on_attach = on_attach,
-	flags = {
-		debounce_text_changes = 150,
-	},
-	capabilities = capabilities,
-})
-
 vim.o.winborder = 'rounded'
-local kind_icons = {
-	Text = "",
-	Method = "",
-	Function = "",
-	Constructor = "",
-	Field = "",
-	Variable = "",
-	Class = "ﴯ",
-	Interface = "",
-	Module = "",
-	Property = "ﰠ",
-	Unit = "",
-	Value = "",
-	Enum = "",
-	Keyword = "",
-	Snippet = "",
-	Color = "",
-	File = "",
-	Reference = "",
-	Folder = "",
-	EnumMember = "",
-	Constant = "",
-	Struct = "",
-	Event = "",
-	Operator = "",
-	TypeParameter = "",
-}
+
+---------------------------------------------------------------------------------------------------
 
 local has_words_before = function()
 	local line, col = unpack(vim.api.nvim_win_get_cursor(0))
@@ -475,3 +328,62 @@ cmp.setup({
 cmp.setup.filetype("txt", {
   enabled = false,
 })
+
+-- LSP configurations
+vim.lsp.config['clangd'] = {
+    cmd = { 'clangd' },
+    filetypes = { 'c', 'cpp' },
+    root_markers = { 'compile_commands.json', '.git' },
+}
+vim.lsp.enable('clangd')
+
+local runtime_path = vim.split(package.path, ";")
+table.insert(runtime_path, "lua/?.lua")
+table.insert(runtime_path, "lua/?/init.lua")
+vim.lsp.config['luals'] = {
+  cmd = { 'lua-language-server' },
+  filetypes = { 'lua' },
+  root_markers = { '.luarc.json', '.luarc.jsonc', '.git' },
+  settings = {
+    Lua = {
+      runtime = {
+        version = 'LuaJIT',
+        path = runtime_path,
+      },
+      diagnostics = {
+          globals = { 'vim' },
+      },
+      workspace = {
+          library = vim.api.nvim_get_runtime_file("", true),
+      },
+      -- For fuck's sake!
+      telemetry = {
+          enable = false,
+      },
+    }
+  }
+}
+vim.lsp.enable('luals')
+
+vim.lsp.config['pyright'] = {
+    cmd = { 'pyright-langserver', '--stdio' },
+    filetypes = { 'python' },
+    root_markers = { 'setup.py', 'pyproject.toml', '.git' },
+}
+vim.lsp.enable('pyright')
+
+vim.api.nvim_create_autocmd('LspAttach', {
+  callback = function(args)
+    vim.keymap.del('n', 'K', { buffer = args.buf })
+    vim.keymap.set('n', 'k', function() vim.lsp.buf.hover() end)
+    vim.keymap.set('n', 'gd', function() vim.lsp.buf.definition() end)
+    vim.keymap.set('n', 'gr', function() vim.lsp.buf.references() end)
+    vim.keymap.set('i', '<C-p>', function() vim.lsp.buf.signature_help() end)
+    vim.keymap.set('n', '<space>e', function() vim.diagnostic.open_float() end)
+    vim.keymap.set('n', ']d', function() vim.diagnostic.jump({count = 1, float = true}) end)
+    vim.keymap.set('n', '[d', function() vim.diagnostic.jump({count = -1, float = true}) end)
+    vim.keymap.set('n', ']e', function() vim.diagnostic.jump({count = 1, float = true, severity = vim.diagnostic.severity.ERROR}) end)
+    vim.keymap.set('n', '[e', function() vim.diagnostic.jump({count = -1, float = true, severity = vim.diagnostic.severity.ERROR}) end)
+  end,
+})
+vim.diagnostic.config({ virtual_lines = false })
