@@ -29,7 +29,7 @@ vim.api.nvim_set_keymap("n", "<C-k>", ":Telescope lsp_workspace_symbols <CR>", {
 
 vim.api.nvim_set_keymap("n", "<C-l>", ":SymbolsOutline<CR>", { noremap = true })
 
-vim.api.nvim_set_keymap("n", "<leader>td", "<Plug>(toggle-lsp-diag)", { noremap = true })
+vim.keymap.set("n", "<leader>td", function() vim.diagnostic.enable(not vim.diagnostic.is_enabled()) end, { silent = true, noremap = true })
 
 vim.api.nvim_set_keymap("n", "<F5>", "<Cmd>lua require'dap'.continue()<CR>", { noremap = true })
 vim.api.nvim_set_keymap("n", "<F10>", "<Cmd>lua require'dap'.step_over()<CR>", { noremap = true })
@@ -192,10 +192,6 @@ require("neo-tree").setup({
 
 require("bufferline").setup{}
 
-require("toggle_lsp_diagnostics").init({
-	update_in_insert = false,
-})
-
 require("gitsigns").setup()
 
 require("telescope").setup({
@@ -337,6 +333,7 @@ vim.lsp.config['clangd'] = {
 }
 vim.lsp.enable('clangd')
 
+
 local runtime_path = vim.split(package.path, ";")
 table.insert(runtime_path, "lua/?.lua")
 table.insert(runtime_path, "lua/?/init.lua")
@@ -373,17 +370,18 @@ vim.lsp.config['pyright'] = {
 vim.lsp.enable('pyright')
 
 vim.api.nvim_create_autocmd('LspAttach', {
-  callback = function(args)
-    vim.keymap.del('n', 'K', { buffer = args.buf })
-    vim.keymap.set('n', 'k', function() vim.lsp.buf.hover() end)
-    vim.keymap.set('n', 'gd', function() vim.lsp.buf.definition() end)
-    vim.keymap.set('n', 'gr', function() vim.lsp.buf.references() end)
-    vim.keymap.set('i', '<C-p>', function() vim.lsp.buf.signature_help() end)
-    vim.keymap.set('n', '<space>e', function() vim.diagnostic.open_float() end)
-    vim.keymap.set('n', ']d', function() vim.diagnostic.jump({count = 1, float = true}) end)
-    vim.keymap.set('n', '[d', function() vim.diagnostic.jump({count = -1, float = true}) end)
-    vim.keymap.set('n', ']e', function() vim.diagnostic.jump({count = 1, float = true, severity = vim.diagnostic.severity.ERROR}) end)
-    vim.keymap.set('n', '[e', function() vim.diagnostic.jump({count = -1, float = true, severity = vim.diagnostic.severity.ERROR}) end)
+    callback = function(args)
+      vim.keymap.del('n', 'K', { buffer = args.buf })
+      vim.keymap.set('n', 'k', function() vim.lsp.buf.hover() end)
+      vim.keymap.set('n', 'gd', function() vim.lsp.buf.definition() end)
+      vim.keymap.set('n', 'gr', function() vim.lsp.buf.references() end)
+      vim.keymap.set('i', '<C-p>', function() vim.lsp.buf.signature_help() end)
+      vim.keymap.set('n', '<space>e', function() vim.diagnostic.open_float() end)
+      vim.keymap.set('n', ']d', function() vim.diagnostic.jump({count = 1}) end)
+      vim.keymap.set('n', '[d', function() vim.diagnostic.jump({count = -1}) end)
+      vim.keymap.set('n', ']e', function() vim.diagnostic.jump({count = 1, severity = vim.diagnostic.severity.ERROR}) end)
+      vim.keymap.set('n', '[e', function() vim.diagnostic.jump({count = -1, severity = vim.diagnostic.severity.ERROR}) end)
   end,
 })
-vim.diagnostic.config({ virtual_lines = false })
+
+vim.diagnostic.config({ virtual_lines = false, virtual_text = true, underline = false })
