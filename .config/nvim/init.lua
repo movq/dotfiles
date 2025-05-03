@@ -136,8 +136,8 @@ require("neo-tree").setup({
       mappings = {
         ["<C-a>"] = "close_window",
         ["<C-e>"] = "close_window",
-        ["<space>"] = { 
-            "toggle_node", 
+        ["<space>"] = {
+            "toggle_node",
             nowait = false, -- disable `nowait` if you have existing combos starting with this char that you want to use 
         },
         ["<2-LeftMouse>"] = "open",
@@ -159,7 +159,7 @@ require("neo-tree").setup({
         -- ['C'] = 'close_all_subnodes',
         ["z"] = "close_all_nodes",
         --["Z"] = "expand_all_nodes",
-        ["a"] = { 
+        ["a"] = {
           "add",
           -- this command supports BASH style brace expansion ("x{a,b,c}" -> xa,xb,xc). see `:h neo-tree-file-actions` for details
           -- some commands may take optional config options, see `:h neo-tree-mappings` for details
@@ -356,13 +356,7 @@ nvim_lsp["lua_ls"].setup({
 	capabilities = capabilities,
 })
 
-vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, {
-	border = "rounded",
-})
-vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.signature_help, {
-	border = "rounded",
-})
-
+vim.o.winborder = 'rounded'
 local kind_icons = {
 	Text = "",
 	Method = "",
@@ -400,7 +394,7 @@ local cmp = require("cmp")
 
 cmp.setup({
 	enabled = function()
-		return vim.api.nvim_buf_get_option(0, "buftype") ~= "prompt" or require("cmp_dap").is_dap_buffer()
+        return vim.api.nvim_get_option_value("buftype", {buf = 0 }) ~= "prompt" or require("cmp_dap").is_dap_buffer()
 	end,
 	snippet = {
 		expand = function(args)
@@ -481,67 +475,3 @@ cmp.setup({
 cmp.setup.filetype("txt", {
   enabled = false,
 })
-
-local dap = require("dap")
-dap.adapters.python = {
-	type = "executable",
-	command = "python",
-	args = { "-m", "debugpy.adapter" },
-}
-dap.adapters.lldb = {
-	type = "executable",
-	command = "/usr/bin/lldb-vscode", -- adjust as needed, must be absolute path
-	name = "lldb",
-}
-
-require("dapui").setup({})
-
-require("codecompanion").setup({
-    opts = {
-        log_level = "DEBUG",
-        system_prompt = function(opts)
-            return "You are a helpful programming assistant. Respond concisely. Do not use polite formalities and get straight to the point."
-        end,
-    },
-    adapters = {
-        openrouter = function()
-            return require("codecompanion.adapters").extend("openai_compatible", {
-                name = "openrouter",
-                env = {
-                    url = "https://openrouter.ai/api",
-                    api_key = function()
-                        return os.getenv("OPENROUTER_API_KEY")
-                    end,
-                },
-                schema = {
-                    model = {
-                        default = "meta-llama/llama-3.3-70b-instruct",
-                    },
-                    temperature = {
-                        default = 1,
-                    },
-                    top_k = {
-                        default = 0,
-                    },
-                    top_p = {
-                        default = 1,
-                    },
-                },
-            })
-        end,
-    },
-    strategies = {
-        chat = {
-            adapter = "openrouter",
-        },
-        inline = {
-            adapter = "openrouter",
-        },
-    },
-    display = {
-        chat = {
-            show_settings = true,
-        },
-    }
-})
-
