@@ -101,7 +101,7 @@ require("lualine").setup({
   sections = {
     lualine_a = {'mode'},
     lualine_b = {'filename'},
-    lualine_c = {'diff', 'diagnostics'},
+    lualine_c = {'diff', 'diagnostics', {'lsp_status', icon=''}},
     lualine_x = {'branch', 'encoding', 'fileformat', 'filetype'},
     lualine_y = {'progress'},
     lualine_z = {'location'}
@@ -243,7 +243,7 @@ local cmp = require("cmp")
 
 cmp.setup({
 	enabled = function()
-        return vim.api.nvim_get_option_value("buftype", {buf = 0 }) ~= "prompt" or require("cmp_dap").is_dap_buffer()
+        return vim.api.nvim_get_option_value("buftype", {buf = 0 }) ~= "prompt"
 	end,
 	snippet = {
 		expand = function(args)
@@ -264,7 +264,7 @@ cmp.setup({
 		["<C-f>"] = cmp.mapping.scroll_docs(4),
 		["<C-Space>"] = cmp.mapping.complete(),
 		["<C-e>"] = cmp.mapping.close(),
-		["<CR>"] = cmp.mapping.confirm({ select = true }), -- Accept currently selected item. Set `select` to `false` to only confirm explicitly selected items.
+		["<CR>"] = cmp.mapping.confirm({ select = false }), -- Accept currently selected item. Set `select` to `false` to only confirm explicitly selected items.
 		["<Tab>"] = cmp.mapping(function(fallback)
             local luasnip = require("luasnip")
 			if luasnip.expand_or_jumpable() then
@@ -285,10 +285,10 @@ cmp.setup({
 		end, { "i", "s" }),
 	}),
 	sources = {
+		{ name = "copilot" },
 		{ name = "nvim_lsp" },
 		{ name = "luasnip" },
 		{ name = "buffer" },
-		{ name = "dap" },
 	},
 	sorting = {
 		comparators = {
@@ -366,12 +366,21 @@ vim.lsp.config['pyright'] = {
     cmd = { 'pyright-langserver', '--stdio' },
     filetypes = { 'python' },
     root_markers = { 'setup.py', 'pyproject.toml', '.git' },
+    settings = {
+      python = {
+        analysis = {
+          autoSearchPaths = true,
+          useLibraryCodeForTypes = true,
+          diagnosticMode = 'openFilesOnly',
+        },
+      },
+  },
 }
 vim.lsp.enable('pyright')
 
 vim.api.nvim_create_autocmd('LspAttach', {
     callback = function(args)
-      vim.keymap.del('n', 'K', { buffer = args.buf })
+      -- vim.keymap.del('n', 'K', { buffer = args.buf })
       vim.keymap.set('n', 'k', function() vim.lsp.buf.hover() end)
       vim.keymap.set('n', 'gd', function() vim.lsp.buf.definition() end)
       vim.keymap.set('n', 'gr', function() vim.lsp.buf.references() end)
