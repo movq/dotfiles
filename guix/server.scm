@@ -72,7 +72,6 @@
                          (openssh-configuration
                            (permit-root-login 'prohibit-password)
                            (password-authentication? #f)))
-                (elogind-service)
                 (dbus-service)
                 (service static-networking-service-type
                          (list (static-networking
