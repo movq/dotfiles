@@ -57,6 +57,7 @@ vim.opt.hidden = true
 vim.opt.cursorline = true
 vim.opt.hlsearch = false
 vim.opt.wrap = false
+vim.o.exrc = true
 
 vim.g.rust_recommended_style = false
 
@@ -378,6 +379,37 @@ vim.lsp.config['pyright'] = {
 }
 vim.lsp.enable('pyright')
 
+vim.lsp.config['gopls'] = {
+    cmd = { 'gopls' },
+    filetypes = { 'go', 'gomod', 'gowork', 'gotmpl' },
+    root_markers = { 'go.mod', 'go.work', '.git' },
+}
+vim.lsp.enable('gopls')
+
+vim.lsp.config['rust-analyzer'] = {
+    cmd = { 'rust-analyzer' },
+    filetypes = { 'rust' },
+    root_markers = { 'Cargo.toml', 'rust-project.json', '.git' },
+    settings = {
+        ["rust-analyzer"] = {
+            diagnostics = {
+                enable = true,
+                experimental = {
+                    enable = true
+                }
+            }
+        }
+    }
+}
+vim.lsp.enable('rust-analyzer')
+
+vim.lsp.config['zls'] = {
+    cmd = { 'zls' },
+    filetypes = { 'zig' },
+    root_markers = { 'build.zig', '.git' },
+}
+vim.lsp.enable('zls')
+
 vim.api.nvim_create_autocmd('LspAttach', {
     callback = function(args)
       -- vim.keymap.del('n', 'K', { buffer = args.buf })
@@ -394,3 +426,48 @@ vim.api.nvim_create_autocmd('LspAttach', {
 })
 
 vim.diagnostic.config({ virtual_lines = false, virtual_text = true, underline = false })
+
+-- Trailing whitespace highlighting (hidden on current line)
+vim.api.nvim_set_hl(0, 'TrailingWhitespace', { bg = 'LightRed' })
+
+local trailing_ws_state = {}
+
+local function update_trailing_ws()
+    local win = vim.api.nvim_get_current_win()
+    local cur_line = vim.fn.line('.')
+
+    if trailing_ws_state[win] and trailing_ws_state[win].line == cur_line then
+        return
+    end
+
+    if trailing_ws_state[win] then
+        for _, id in ipairs(trailing_ws_state[win].matches) do
+            pcall(vim.fn.matchdelete, id)
+        end
+    end
+
+    local matches = {}
+    if cur_line > 1 then
+        matches[1] = vim.fn.matchadd('TrailingWhitespace', '\\%<' .. cur_line .. 'l\\s\\+$')
+    end
+    matches[#matches + 1] = vim.fn.matchadd('TrailingWhitespace', '\\%>' .. cur_line .. 'l\\s\\+$')
+
+    trailing_ws_state[win] = { line = cur_line, matches = matches }
+end
+
+vim.api.nvim_create_autocmd({ 'CursorMoved', 'CursorMovedI', 'BufWinEnter' }, {
+    pattern = '*',
+    callback = update_trailing_ws,
+})
+
+vim.api.nvim_create_autocmd('WinClosed', {
+    pattern = '*',
+    callback = function(args)
+        trailing_ws_state[tonumber(args.match)] = nil
+    end,
+})
+-- require("copilot").setup({
+--   suggestion = { enabled = false },
+--   panel = { enabled = false },
+-- })
+-- require("copilot_cmp").setup()
