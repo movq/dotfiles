@@ -1,0 +1,27 @@
+{
+  "nodes": {
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1772891646,
+        "narHash": "sha256-DIBClJbwA5iwzaBtJgcpH/h0/xPwCnh0cumKzqC6pEc=",
+        "owner": "movq",
+        "repo": "nixpkgs",
+        "rev": "90cbafa62bdbce5c2133a05ffc663a96279bfffe",
+        "type": "github"
+      },
+      "original": {
+        "owner": "movq",
+        "ref": "full-source-bootstrap",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "root": {
+      "inputs": {
+        "nixpkgs": "nixpkgs"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}
