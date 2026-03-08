@@ -50,6 +50,7 @@
         ffmpegthumbnailer
         tmux
         delta
+        file
       ];
     in {
       packages.${system}.default = pkgs.buildEnv {
