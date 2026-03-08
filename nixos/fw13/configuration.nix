@@ -68,6 +68,9 @@
     substituters = lib.mkForce [ "https://nix-cache.mjones.io" ];
     trusted-public-keys = lib.mkForce [ "nix-cache.mjones.io:tOio4xRDNRMH4PfvWIS9lDa32ynJGZt1naEVDg5u+nU=" ];
     trusted-users = [ "mike" "@wheel" ];
+    use-registries = false;
+    extra-experimental-features = [ "nix-command" "flakes" ];
+    builders-use-substitutes = true;
   };
 
   networking.hostName = "mike-framework"; # Define your hostname.
