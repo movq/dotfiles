@@ -49,6 +49,7 @@
         wireguard-tools
         ffmpegthumbnailer
         tmux
+        delta
       ];
     in {
       packages.${system}.default = pkgs.buildEnv {
