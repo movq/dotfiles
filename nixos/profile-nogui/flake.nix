@@ -12,8 +12,35 @@
   outputs = { nixpkgs, lct, ... }:
     let
       system = "x86_64-linux";
-      pkgs = nixpkgs.legacyPackages.${system};
-      lctPkg = lct.packages.${system}.default;  # adjust based on how lct exposes its package
+      nixOverlay = _final: prev:
+          let
+            commonFlags = [
+              "-Dsysconfdir=/home/jom9cbg/nix/etc"
+              "-Dlocalstatedir=/home/jom9cbg/nix/var"
+            ];
+
+            customNix = prev.nixVersions.stable.overrideScope (_: nixPrev: {
+              nix-store = nixPrev.nix-store.overrideAttrs (old: {
+                mesonFlags = (old.mesonFlags or [ ]) ++ commonFlags ++ [
+                  "-Dstore-dir=/home/jom9cbg/nix/store"
+                  "-Dlog-dir=/home/jom9cbg/nix/var/log"
+                ];
+              });
+
+              nix-cli = nixPrev.nix-cli.overrideAttrs (old: {
+                mesonFlags = (old.mesonFlags or [ ]) ++ commonFlags;
+              });
+            });
+          in {
+            nix = customNix;
+          };
+
+      pkgs = import nixpkgs {
+        inherit system;
+        overlays = [ nixOverlay ];
+      };
+
+      lctPkg = lct.packages.${system}.default;
 
       myPackages = with pkgs; [
         fish
@@ -37,8 +64,12 @@
         file
         unzip
         fzf
+        nix
+        pipewire
+        wireplumber
       ];
     in {
+      overlays.default = nixOverlay;
       packages.${system}.default = pkgs.buildEnv {
         name = "user-profile";
         paths = myPackages;
