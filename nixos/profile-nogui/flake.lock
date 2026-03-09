@@ -1,0 +1,43 @@
+{
+  "nodes": {
+    "lct": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1772903416,
+        "narHash": "sha256-JK/Jfs3VFCYCDWgz/FLLhy9C2y6UkqHYYF2KPqNnWvc=",
+        "rev": "06440cda7cad3e717660e799e11a3941b6c41da2",
+        "type": "tarball",
+        "url": "https://git.mjones.io/api/v1/repos/mike/lct/archive/06440cda7cad3e717660e799e11a3941b6c41da2.tar.gz"
+      },
+      "original": {
+        "type": "tarball",
+        "url": "https://git.mjones.io/mike/lct/archive/master.tar.gz"
+      }
+    },
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1773049700,
+        "narHash": "sha256-lZ3Lqs9LpqBmX+JbSyJPhLNxl2+un9zN+XwwQ2iT1CQ=",
+        "rev": "c134987cc0d8b08d24e354fb08d6c4d146dd761f",
+        "type": "tarball",
+        "url": "https://git.mjones.io/api/v1/repos/mike/nixpkgs/archive/c134987cc0d8b08d24e354fb08d6c4d146dd761f.tar.gz"
+      },
+      "original": {
+        "type": "tarball",
+        "url": "https://git.mjones.io/mike/nixpkgs/archive/master.tar.gz"
+      }
+    },
+    "root": {
+      "inputs": {
+        "lct": "lct",
+        "nixpkgs": "nixpkgs"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}
