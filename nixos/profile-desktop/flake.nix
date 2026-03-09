@@ -53,6 +53,7 @@
         file
         unzip
         fzf
+        android-tools
       ];
     in {
       packages.${system}.default = pkgs.buildEnv {
