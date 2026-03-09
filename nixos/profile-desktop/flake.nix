@@ -51,6 +51,8 @@
         tmux
         delta
         file
+        unzip
+        fzf
       ];
     in {
       packages.${system}.default = pkgs.buildEnv {
