@@ -67,6 +67,10 @@
         nix
         pipewire
         wireplumber
+        ncurses
+        glibc
+        uv
+        ty
       ];
     in {
       overlays.default = nixOverlay;
