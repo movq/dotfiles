@@ -71,6 +71,13 @@
         glibc
         uv
         ty
+        sway
+        fuzzel
+        foot
+        i3status
+        glibcLocales
+        grim
+        slurp
       ];
     in {
       overlays.default = nixOverlay;
