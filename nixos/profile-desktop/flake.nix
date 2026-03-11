@@ -1,7 +1,7 @@
 {
   inputs = {
     nixpkgs = {
-      url = "github:movq/nixpkgs/full-source-bootstrap";
+      url = "tarball+https://git.mjones.io/mike/nixpkgs/archive/master.tar.gz";
     };
     lct = {
       url = "tarball+https://git.mjones.io/mike/lct/archive/master.tar.gz";
@@ -12,8 +12,13 @@
   outputs = { nixpkgs, lct, ... }:
     let
       system = "x86_64-linux";
-      pkgs = nixpkgs.legacyPackages.${system};
-      lctPkg = lct.packages.${system}.default;  # adjust based on how lct exposes its package
+      pkgs = import nixpkgs {
+        localSystem = {
+          system = "x86_64-linux";
+          gcc.arch = "x86-64-v3";
+        };
+      };
+      lctPkg = lct.packages.${system}.default;
 
       myPackages = with pkgs; [
         fish

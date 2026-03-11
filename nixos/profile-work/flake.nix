@@ -36,7 +36,10 @@
           };
 
       pkgs = import nixpkgs {
-        inherit system;
+        localSystem = {
+          system = "x86_64-linux";
+          gcc.arch = "x86-64-v3";
+        };
         overlays = [ nixOverlay ];
       };
 
@@ -58,7 +61,7 @@
         binutils
         sox
         compsize
-        python3
+        (python3.withPackages (ps: [ ps.pygobject3 ]))
         tmux
         delta
         file

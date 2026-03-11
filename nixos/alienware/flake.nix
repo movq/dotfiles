@@ -4,7 +4,15 @@
   };
   outputs = inputs@{ self, nixpkgs, ... }: {
     nixosConfigurations.mike-alienware = nixpkgs.lib.nixosSystem {
-      modules = [ ./configuration.nix ];
+      modules = [
+        ./configuration.nix
+         {
+          nixpkgs.hostPlatform = {
+            system = "x86_64-linux";
+            gcc.arch = "x86-64-v3";
+          };
+        }
+      ];
     };
   };
 }
