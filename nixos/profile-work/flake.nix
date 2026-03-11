@@ -78,6 +78,7 @@
         glibcLocales
         grim
         slurp
+        librewolf
       ];
     in {
       overlays.default = nixOverlay;
