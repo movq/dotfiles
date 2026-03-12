@@ -64,6 +64,8 @@
     keepEnv = true;
     noPass = true;
   }];
+
+  nix.package = pkgs.nixVersions.latest;
   nix.settings = {
     substituters = lib.mkForce [ "https://nix-cache.mjones.io" ];
     trusted-public-keys = lib.mkForce [ "nix-cache.mjones.io:tOio4xRDNRMH4PfvWIS9lDa32ynJGZt1naEVDg5u+nU=" ];
