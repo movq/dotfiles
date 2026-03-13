@@ -12,12 +12,7 @@
   outputs = { nixpkgs, lct, ... }:
     let
       system = "x86_64-linux";
-      pkgs = import nixpkgs {
-        localSystem = {
-          system = "x86_64-linux";
-          gcc.arch = "x86-64-v3";
-        };
-      };
+      pkgs = nixpkgs.legacyPackages.${system};
       lctPkg = lct.packages.${system}.default;
 
       myPackages = with pkgs; [
@@ -61,12 +56,6 @@
         android-tools
       ];
     in {
-      packages.${system}.default = pkgs.buildEnv {
-        name = "user-profile";
-        paths = myPackages;
-        pathsToLink = [ "/bin" "/lib" "/share" "/etc" ];
-        extraOutputsToInstall = [ "man" "doc" "info" "devdoc" ];
-        ignoreCollisions = true;
-      };
+      packages.${system}.default = import ./. { inherit pkgs; };
     };
 }
