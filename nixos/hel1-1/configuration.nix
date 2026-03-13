@@ -64,6 +64,7 @@
 
     nameservers = [ "185.12.64.1" "185.12.64.2" "2a01:4ff:ff00::add:1" "2a01:4ff:ff00::add:2" ];
   };
+  networking.firewall.allowedTCPPorts = [ 80 443 ];
 
   time.timeZone = "Europe/London";
 
@@ -86,6 +87,53 @@
     enable = true;
   };
 
+  services.nix-serve = {
+    enable = true;
+    bindAddress = "127.0.0.1";
+    port = 5000;
+    secretKeyFile = "/var/cache-priv-key.pem";
+  };
+
+  services.nginx = {
+    enable = true;
+    recommendedProxySettings = true;
+    virtualHosts."nix-cache.mjones.io" = {
+      forceSSL = true;
+      http2 = true;
+      sslCertificate = "/var/lib/uacme/mjones.io/cert.pem";
+      sslCertificateKey = "/var/lib/uacme/private/mjones.io/key.pem";
+      locations."/" = {
+        proxyPass = "http://127.0.0.1:5000";
+      };
+    };
+  };
+
+  systemd.services.uacme-mjones-io = {
+    description = "Issue/renew mjones.io certificates with uacme";
+    after = [ "network-online.target" ];
+    wants = [ "network-online.target" ];
+    path = [ pkgs.coreutils pkgs.curl pkgs.uacme ];
+    serviceConfig.Type = "oneshot";
+    script = ''
+      set +e
+      ${pkgs.uacme}/bin/uacme -v -c /var/lib/uacme -h ${./uacme-hook.sh} -t EC -b 256 -p shortlived issue mjones.io '*.mjones.io'
+      rc=$?
+      set -e
+      if [ "$rc" -eq 0 ]; then
+        ${pkgs.systemd}/bin/systemctl restart nginx.service
+      fi
+      exit "$rc"
+    '';
+  };
+
+  systemd.timers.uacme-mjones-io = {
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnCalendar = "daily";
+      Persistent = true;
+    };
+  };
+
   nix.package = pkgs.nixVersions.latest;
   nix.settings = {
     substituters = lib.mkForce [ "https://nix-cache.mjones.io" ];
@@ -98,4 +146,3 @@
 
   system.stateVersion = "26.05";
 }
-
