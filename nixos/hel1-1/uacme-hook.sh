@@ -12,7 +12,7 @@ ident="$3"
 token="$4"
 auth="$5"
 dig_cmd="${UACME_DIG_CMD:-dig}"
-dns_resolvers="${UACME_DNS_RESOLVERS:-1.1.1.1 8.8.8.8}"
+dns_resolver="${UACME_DNS_RESOLVER:-1.1.1.1}"
 dns_wait_timeout="${UACME_DNS_WAIT_TIMEOUT:-180}"
 dns_wait_interval="${UACME_DNS_WAIT_INTERVAL:-5}"
 dns_ttl="${UACME_DNS_TTL:-10}"
@@ -49,17 +49,12 @@ pdns_patch() {
     -d "$1"
 }
 
-txt_present_on_all_resolvers() {
+txt_present() {
   name="$1"
   value="$2"
 
-  for resolver in $dns_resolvers; do
-    # Query public recursors to reduce race conditions between sequential DNS-01 challenges.
-    txt="$($dig_cmd +time=2 +tries=1 +short TXT "$name" @"$resolver" 2>/dev/null || true)"
-    if ! printf '%s\n' "$txt" | sed -e 's/^"//' -e 's/"$//' | grep -Fx -- "$value" >/dev/null; then
-      return 1
-    fi
-  done
+  txt="$($dig_cmd +time=2 +tries=1 +short TXT "$name" @"$dns_resolver" 2>/dev/null || true)"
+  printf '%s\n' "$txt" | sed -e 's/^"//' -e 's/"$//' | grep -Fx -- "$value" >/dev/null
 }
 
 wait_for_txt_present() {
@@ -68,7 +63,7 @@ wait_for_txt_present() {
   elapsed=0
 
   while [ "$elapsed" -lt "$dns_wait_timeout" ]; do
-    if txt_present_on_all_resolvers "$name" "$value"; then
+    if txt_present "$name" "$value"; then
       return 0
     fi
     sleep "$dns_wait_interval"
