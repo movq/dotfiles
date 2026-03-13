@@ -12,85 +12,10 @@
   outputs = { nixpkgs, lct, ... }:
     let
       system = "x86_64-linux";
-      nixOverlay = _final: prev:
-          let
-            commonFlags = [
-              "-Dsysconfdir=/home/jom9cbg/nix/etc"
-              "-Dlocalstatedir=/home/jom9cbg/nix/var"
-            ];
+      pkgsFun = import nixpkgs;
+      profile = import ./. { inherit pkgsFun system; };
 
-            customNix = prev.nixVersions.stable.overrideScope (_: nixPrev: {
-              nix-store = nixPrev.nix-store.overrideAttrs (old: {
-                mesonFlags = (old.mesonFlags or [ ]) ++ commonFlags ++ [
-                  "-Dstore-dir=/home/jom9cbg/nix/store"
-                  "-Dlog-dir=/home/jom9cbg/nix/var/log"
-                ];
-              });
-
-              nix-cli = nixPrev.nix-cli.overrideAttrs (old: {
-                mesonFlags = (old.mesonFlags or [ ]) ++ commonFlags;
-              });
-            });
-          in {
-            nix = customNix;
-          };
-
-      pkgs = import nixpkgs {
-        localSystem = {
-          system = "x86_64-linux";
-          gcc.arch = "x86-64-v3";
-        };
-        overlays = [ nixOverlay ];
-      };
-
-      lctPkg = lct.packages.${system}.default;
-
-      myPackages = with pkgs; [
-        fish
-        rclone
-        git
-        curl
-        jq
-        ripgrep
-        fd
-        htop
-        neovim
-        jujutsu
-        lctPkg
-        bubblewrap
-        binutils
-        sox
-        compsize
-        (python3.withPackages (ps: [ ps.pygobject3 ]))
-        tmux
-        delta
-        file
-        unzip
-        fzf
-        nix
-        pipewire
-        wireplumber
-        ncurses
-        glibc
-        uv
-        ty
-        sway
-        fuzzel
-        foot
-        i3status
-        glibcLocales
-        grim
-        slurp
-        librewolf
-      ];
     in {
-      overlays.default = nixOverlay;
-      packages.${system}.default = pkgs.buildEnv {
-        name = "user-profile";
-        paths = myPackages;
-        pathsToLink = [ "/bin" "/lib" "/share" "/etc" ];
-        extraOutputsToInstall = [ "man" "doc" "info" "devdoc" ];
-        ignoreCollisions = true;
-      };
+      packages.${system}.default = profile;
     };
 }
