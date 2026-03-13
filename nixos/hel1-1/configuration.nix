@@ -87,6 +87,14 @@
     enable = true;
   };
 
+  services.postgresql = {
+    enable = true;
+    enableTCPIP = false;
+    authentication = ''
+      local all all peer
+    '';
+  };
+
   services.nix-serve = {
     enable = true;
     bindAddress = "127.0.0.1";
@@ -112,7 +120,7 @@
     description = "Issue/renew mjones.io certificates with uacme";
     after = [ "network-online.target" ];
     wants = [ "network-online.target" ];
-    path = [ pkgs.coreutils pkgs.curl pkgs.uacme ];
+    path = [ pkgs.bind pkgs.coreutils pkgs.curl pkgs.uacme ];
     serviceConfig.Type = "oneshot";
     script = ''
       set +e
