@@ -14,6 +14,77 @@ let
   ];
 
   roundcubeHostName = "webmail.mjones.io";
+  matrixServerName = "mjones.io";
+  matrixHostName = "mtrx.mjones.io";
+  matrixAuthHostName = "mtrx-auth.mjones.io";
+  matrixPublicBaseUrl = "https://${matrixHostName}/";
+  matrixAuthPublicBaseUrl = "https://${matrixAuthHostName}/";
+
+  masDataDir = "/var/lib/matrix-authentication-service";
+  masSharedSecretFile = "${masDataDir}/shared-secret";
+  masEncryptionKeyFile = "${masDataDir}/encryption-key";
+  masKeysDir = "${masDataDir}/keys";
+  masConfigFile = (pkgs.formats.yaml { }).generate "matrix-authentication-service-config.yaml" {
+    http = {
+      public_base = matrixAuthPublicBaseUrl;
+      issuer = matrixAuthPublicBaseUrl;
+      listeners = [
+        {
+          name = "web";
+          resources = [
+            { name = "discovery"; }
+            { name = "human"; }
+            { name = "oauth"; }
+            { name = "compat"; }
+            { name = "graphql"; }
+            {
+              name = "assets";
+              path = "${pkgs.matrix-authentication-service}/share/matrix-authentication-service/assets";
+            }
+          ];
+          binds = [ {
+            host = "127.0.0.1";
+            port = 8080;
+          } ];
+        }
+        {
+          name = "internal";
+          resources = [ { name = "health"; } ];
+          binds = [ {
+            host = "127.0.0.1";
+            port = 8081;
+          } ];
+        }
+      ];
+    };
+    database.uri = "postgresql:///matrix_auth_service?host=/run/postgresql";
+    matrix = {
+      kind = "synapse";
+      homeserver = matrixServerName;
+      endpoint = "http://127.0.0.1:8008/";
+      secret_file = masSharedSecretFile;
+    };
+    secrets = {
+      encryption_file = masEncryptionKeyFile;
+      keys_dir = masKeysDir;
+    };
+  };
+
+  matrixServerWellKnown = {
+    "m.server" = "${matrixHostName}:443";
+  };
+  matrixClientWellKnown = {
+    "m.homeserver".base_url = "https://${matrixHostName}";
+    "org.matrix.msc2965.authentication" = {
+      issuer = matrixAuthPublicBaseUrl;
+      account = "${matrixAuthPublicBaseUrl}account";
+    };
+  };
+  mkWellKnown = data: ''
+    default_type application/json;
+    add_header Access-Control-Allow-Origin *;
+    return 200 '${builtins.toJSON data}';
+  '';
 
   uacmeIssueArgs = cert:
     lib.concatStringsSep " " (builtins.map lib.escapeShellArg cert.domains);
@@ -111,6 +182,122 @@ in
     authentication = ''
       local all all peer
     '';
+    ensureDatabases = [
+      "matrix_auth_service"
+      "synapse"
+      "mautrix_discord"
+      "mautrix_telegram"
+      "mautrix_whatsapp"
+    ];
+    ensureUsers = [
+      {
+        name = "matrix_auth_service";
+        ensureDBOwnership = true;
+      }
+      {
+        name = "synapse";
+        ensureDBOwnership = true;
+      }
+      {
+        name = "mautrix_discord";
+        ensureDBOwnership = true;
+      }
+      {
+        name = "mautrix_telegram";
+        ensureDBOwnership = true;
+      }
+      {
+        name = "mautrix_whatsapp";
+        ensureDBOwnership = true;
+      }
+    ];
+  };
+
+  services.matrix-synapse = {
+    enable = true;
+    settings = {
+      server_name = matrixServerName;
+      public_baseurl = matrixPublicBaseUrl;
+      database = {
+        name = "psycopg2";
+        args = {
+          database = "matrix-synapse";
+          user = "matrix-synapse";
+          host = "/run/postgresql";
+        };
+      };
+      matrix_authentication_service = {
+        enabled = true;
+        endpoint = "http://127.0.0.1:8080/";
+        secret_file = masSharedSecretFile;
+      };
+    };
+  };
+
+  users.users.matrix-authentication-service = {
+    isSystemUser = true;
+    group = "matrix-authentication-service";
+    home = masDataDir;
+    createHome = true;
+    description = "Matrix Authentication Service";
+  };
+  users.groups.matrix-authentication-service = { };
+  users.users.matrix-synapse.extraGroups = [ "matrix-authentication-service" ];
+
+  services.mautrix-discord = {
+    enable = true;
+    settings = {
+      homeserver = {
+        address = "http://127.0.0.1:8008";
+        domain = matrixServerName;
+      };
+      appservice.database = {
+        type = "postgres";
+        uri = "postgresql:///mautrix_discord?host=/run/postgresql";
+      };
+      bridge.permissions = {
+        "${matrixServerName}" = "user";
+        "@mike:${matrixServerName}" = "admin";
+      };
+    };
+  };
+
+  services.mautrix-telegram = {
+    enable = true;
+    environmentFile = "/var/lib/secrets/mautrix-telegram.env";
+    settings = {
+      homeserver = {
+        address = "http://127.0.0.1:8008";
+        domain = matrixServerName;
+      };
+      appservice.database = "postgresql:///mautrix_telegram?host=/run/postgresql";
+      telegram = {
+        api_id = "$MAUTRIX_TELEGRAM_TELEGRAM_API_ID";
+        api_hash = "$MAUTRIX_TELEGRAM_TELEGRAM_API_HASH";
+      };
+      bridge.permissions = {
+        "${matrixServerName}" = "full";
+        "@mike:${matrixServerName}" = "admin";
+      };
+    };
+  };
+
+  services.mautrix-whatsapp = {
+    enable = true;
+    settings = {
+      database = {
+        type = "postgres";
+        uri = "postgresql:///mautrix_whatsapp?host=/run/postgresql";
+      };
+      homeserver = {
+        address = "http://127.0.0.1:8008";
+        domain = matrixServerName;
+      };
+      bridge.permissions = {
+        "${matrixServerName}" = "user";
+        "@mike:${matrixServerName}" = "admin";
+      };
+    };
   };
 
   services.nix-serve = {
@@ -233,6 +420,8 @@ in
   systemd.tmpfiles.rules = [
     "d /var/lib/dovecot2 0750 root root -"
     "f /var/lib/dovecot2/passwd 0600 root root -"
+    "d /var/lib/secrets 0750 root root -"
+    "f /var/lib/secrets/mautrix-telegram.env 0600 root root -"
   ];
 
   services.nginx = {
@@ -255,6 +444,47 @@ in
       sslCertificateKey = "/var/lib/uacme/private/mjones.io/key.pem";
       locations."/" = {
         proxyPass = "http://127.0.0.1:5000";
+      };
+    };
+    virtualHosts."mjones.io" = {
+      forceSSL = true;
+      http2 = true;
+      sslCertificate = "/var/lib/uacme/mjones.io/cert.pem";
+      sslCertificateKey = "/var/lib/uacme/private/mjones.io/key.pem";
+      locations."= /.well-known/matrix/server".extraConfig = mkWellKnown matrixServerWellKnown;
+      locations."= /.well-known/matrix/client".extraConfig = mkWellKnown matrixClientWellKnown;
+      locations."/".extraConfig = ''
+        return 404;
+      '';
+    };
+    virtualHosts."${matrixHostName}" = {
+      forceSSL = true;
+      http2 = true;
+      sslCertificate = "/var/lib/uacme/mjones.io/cert.pem";
+      sslCertificateKey = "/var/lib/uacme/private/mjones.io/key.pem";
+      locations."~ ^/_matrix/client/(.*)/(login|logout|refresh)$" = {
+        proxyPass = "http://127.0.0.1:8080";
+      };
+      locations."/_matrix" = {
+        proxyPass = "http://127.0.0.1:8008";
+      };
+      locations."/_synapse/client" = {
+        proxyPass = "http://127.0.0.1:8008";
+      };
+      locations."/_synapse/mas" = {
+        proxyPass = "http://127.0.0.1:8008";
+      };
+      locations."/".extraConfig = ''
+        return 404;
+      '';
+    };
+    virtualHosts."${matrixAuthHostName}" = {
+      forceSSL = true;
+      http2 = true;
+      sslCertificate = "/var/lib/uacme/mjones.io/cert.pem";
+      sslCertificateKey = "/var/lib/uacme/private/mjones.io/key.pem";
+      locations."/" = {
+        proxyPass = "http://127.0.0.1:8080";
       };
     };
     virtualHosts."${roundcubeHostName}" = {
@@ -300,6 +530,81 @@ in
   systemd.services.nginx = {
     after = [ "nginx-snakeoil-cert.service" ];
     requires = [ "nginx-snakeoil-cert.service" ];
+  };
+
+  systemd.services.matrix-authentication-service-init = {
+    description = "Initialize Matrix Authentication Service state";
+    before = [
+      "matrix-authentication-service.service"
+      "matrix-synapse.service"
+    ];
+    wantedBy = [ "multi-user.target" ];
+    path = [ pkgs.coreutils pkgs.openssl ];
+    serviceConfig = {
+      Type = "oneshot";
+      UMask = "0077";
+    };
+    script = ''
+      install -d -m 0750 -o matrix-authentication-service -g matrix-authentication-service ${masDataDir}
+      install -d -m 0750 -o matrix-authentication-service -g matrix-authentication-service ${masKeysDir}
+
+      if [ ! -s ${masSharedSecretFile} ]; then
+        openssl rand -hex 32 > ${masSharedSecretFile}
+      fi
+
+      if [ ! -s ${masEncryptionKeyFile} ]; then
+        openssl rand -hex 32 > ${masEncryptionKeyFile}
+      fi
+
+      if [ ! -s ${masKeysDir}/signing-key.pem ]; then
+        openssl genrsa -out ${masKeysDir}/signing-key.pem 4096
+      fi
+
+      chown root:matrix-authentication-service ${masSharedSecretFile}
+      chmod 0440 ${masSharedSecretFile}
+
+      chown matrix-authentication-service:matrix-authentication-service \
+        ${masEncryptionKeyFile} \
+        ${masKeysDir}/signing-key.pem
+      chmod 0400 ${masEncryptionKeyFile} ${masKeysDir}/signing-key.pem
+    '';
+  };
+
+  systemd.services.matrix-synapse = {
+    wants = [ "matrix-authentication-service-init.service" ];
+    after = [ "matrix-authentication-service-init.service" ];
+  };
+
+  systemd.services.matrix-authentication-service = {
+    description = "Matrix Authentication Service";
+    wantedBy = [ "multi-user.target" ];
+    wants = [
+      "network-online.target"
+      "postgresql.target"
+      config.services.matrix-synapse.serviceUnit
+    ];
+    after = [
+      "network-online.target"
+      "postgresql.target"
+      "matrix-authentication-service-init.service"
+      config.services.matrix-synapse.serviceUnit
+    ];
+    requires = [ "matrix-authentication-service-init.service" ];
+    serviceConfig = {
+      Type = "simple";
+      User = "matrix-authentication-service";
+      Group = "matrix-authentication-service";
+      WorkingDirectory = masDataDir;
+      ExecStart = "${lib.getExe pkgs.matrix-authentication-service} --config ${masConfigFile} server";
+      Restart = "on-failure";
+      RestartSec = "5s";
+      UMask = "0077";
+      NoNewPrivileges = true;
+      PrivateTmp = true;
+      ProtectSystem = "strict";
+      ProtectHome = true;
+      ReadWritePaths = [ masDataDir ];
+    };
   };
 
   systemd.services.uacme-mjones-io = {
