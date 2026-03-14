@@ -2,18 +2,15 @@
   "nodes": {
     "nixpkgs": {
       "locked": {
-        "lastModified": 1772891646,
-        "narHash": "sha256-DIBClJbwA5iwzaBtJgcpH/h0/xPwCnh0cumKzqC6pEc=",
-        "owner": "movq",
-        "repo": "nixpkgs",
-        "rev": "90cbafa62bdbce5c2133a05ffc663a96279bfffe",
-        "type": "github"
+        "lastModified": 1773424450,
+        "narHash": "sha256-GPtDxOGlU9ieXqJlbJR81pTgwkIwq8hfJSeZU9wRQ/I=",
+        "rev": "f170c8a382605267ae7278eb336bf28bd5b856df",
+        "type": "tarball",
+        "url": "https://git.mjones.io/api/v1/repos/mike/nixpkgs/archive/f170c8a382605267ae7278eb336bf28bd5b856df.tar.gz"
       },
       "original": {
-        "owner": "movq",
-        "ref": "full-source-bootstrap",
-        "repo": "nixpkgs",
-        "type": "github"
+        "type": "tarball",
+        "url": "https://git.mjones.io/mike/nixpkgs/archive/master.tar.gz"
       }
     },
     "root": {
