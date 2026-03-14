@@ -7,6 +7,10 @@ let
       certName = "mjones.io";
       domains = [ "mjones.io" "*.mjones.io" ];
     }
+    {
+      certName = "ilmarin.net";
+      domains = [ "ilmarin.net" "*.ilmarin.net" ];
+    }
   ];
 
   uacmeIssueArgs = cert:
