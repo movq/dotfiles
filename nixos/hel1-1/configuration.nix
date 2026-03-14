@@ -219,7 +219,6 @@ in
     virtualHosts."nix-cache.mjones.io" = {
       forceSSL = true;
       http2 = true;
-      recommendedZstdSettings = true;
       sslCertificate = "/var/lib/uacme/mjones.io/cert.pem";
       sslCertificateKey = "/var/lib/uacme/private/mjones.io/key.pem";
       locations."/" = {
