@@ -221,6 +221,16 @@ in
   services.nginx = {
     enable = true;
     recommendedProxySettings = true;
+    virtualHosts."default-tls" = {
+      default = true;
+      onlySSL = true;
+      serverName = "_";
+      sslCertificate = "/var/lib/nginx/snakeoil/cert.pem";
+      sslCertificateKey = "/var/lib/nginx/snakeoil/key.pem";
+      extraConfig = ''
+        return 444;
+      '';
+    };
     virtualHosts."nix-cache.mjones.io" = {
       forceSSL = true;
       http2 = true;
@@ -230,6 +240,42 @@ in
         proxyPass = "http://127.0.0.1:5000";
       };
     };
+  };
+
+  systemd.services.nginx-snakeoil-cert = {
+    description = "Generate default self-signed certificate for nginx";
+    before = [ "nginx.service" ];
+    serviceConfig = {
+      Type = "oneshot";
+      UMask = "0027";
+    };
+    path = [ pkgs.coreutils pkgs.openssl ];
+    script = ''
+      install -d -m 0750 -o root -g ${config.services.nginx.group} /var/lib/nginx/snakeoil
+
+      if [ ! -s /var/lib/nginx/snakeoil/cert.pem ] || [ ! -s /var/lib/nginx/snakeoil/key.pem ]; then
+        openssl req \
+          -x509 \
+          -newkey ec \
+          -pkeyopt ec_paramgen_curve:prime256v1 \
+          -pkeyopt ec_param_enc:named_curve \
+          -sha256 \
+          -nodes \
+          -days 3650 \
+          -subj "/CN=nginx-default.invalid" \
+          -keyout /var/lib/nginx/snakeoil/key.pem \
+          -out /var/lib/nginx/snakeoil/cert.pem
+      fi
+
+      chown root:${config.services.nginx.group} /var/lib/nginx/snakeoil/cert.pem /var/lib/nginx/snakeoil/key.pem
+      chmod 0644 /var/lib/nginx/snakeoil/cert.pem
+      chmod 0640 /var/lib/nginx/snakeoil/key.pem
+    '';
+  };
+
+  systemd.services.nginx = {
+    after = [ "nginx-snakeoil-cert.service" ];
+    requires = [ "nginx-snakeoil-cert.service" ];
   };
 
   systemd.services.uacme-mjones-io = {
