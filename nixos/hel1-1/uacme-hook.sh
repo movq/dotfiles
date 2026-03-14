@@ -16,6 +16,7 @@ dns_resolver="${UACME_DNS_RESOLVER:-1.1.1.1}"
 dns_wait_timeout="${UACME_DNS_WAIT_TIMEOUT:-180}"
 dns_wait_interval="${UACME_DNS_WAIT_INTERVAL:-5}"
 dns_ttl="${UACME_DNS_TTL:-10}"
+dns_post_set_sleep="${UACME_DNS_POST_SET_SLEEP:-15}"
 
 if [ "$challenge_type" != "dns-01" ]; then
   exit 1
@@ -100,6 +101,7 @@ case "$method" in
       }]
     }"
     wait_for_txt_present "$record_name" "$auth"
+    sleep "$dns_post_set_sleep"
     ;;
   done|failed)
     pdns_patch "{
