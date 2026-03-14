@@ -1,5 +1,17 @@
 { config, lib, pkgs, ... }:
 
+let
+  # Add or update certificate sets here.
+  uacmeCertificates = [
+    {
+      certName = "mjones.io";
+      domains = [ "mjones.io" "*.mjones.io" ];
+    }
+  ];
+
+  uacmeIssueArgs = cert:
+    lib.concatStringsSep " " (builtins.map lib.escapeShellArg cert.domains);
+in
 {
   boot.initrd.availableKernelModules = [ "nvme" "ahci" ];
   boot.initrd.kernelModules = [ ];
@@ -117,21 +129,48 @@
   };
 
   systemd.services.uacme-mjones-io = {
-    description = "Issue/renew mjones.io certificates with uacme";
+    description = "Issue/renew configured certificates with uacme";
     after = [ "network-online.target" ];
     wants = [ "network-online.target" ];
     path = [ pkgs.bind.dnsutils pkgs.coreutils pkgs.curl pkgs.uacme ];
     serviceConfig.Type = "oneshot";
     script = ''
-      set +e
       export UACME_DIG_CMD=${pkgs.bind.dnsutils}/bin/dig
-      ${pkgs.uacme}/bin/uacme -v -c /var/lib/uacme -h ${./uacme-hook.sh} -t EC -b 256 -p shortlived issue mjones.io '*.mjones.io'
-      rc=$?
-      set -e
-      if [ "$rc" -eq 0 ]; then
-        ${pkgs.systemd}/bin/systemctl restart nginx.service
+      updated=0
+      failed=0
+
+      ${lib.concatMapStringsSep "\n" (cert: ''
+        set +e
+        ${pkgs.uacme}/bin/uacme -v -c /var/lib/uacme -h ${./uacme-hook.sh} -t EC -b 256 -p shortlived issue ${uacmeIssueArgs cert}
+        cert_rc=$?
+        set -e
+        case "$cert_rc" in
+          0) updated=1 ;;
+          1) ;;
+          *) failed=1 ;;
+        esac
+      '') uacmeCertificates}
+
+      if [ "$failed" -ne 0 ]; then
+        exit 2
       fi
-      exit "$rc"
+
+      if [ "$updated" -eq 0 ]; then
+        exit 1
+      fi
+
+      chgrp ${config.services.nginx.group} /var/lib/uacme/private
+      chmod 0710 /var/lib/uacme/private
+
+      ${lib.concatMapStringsSep "\n" (cert: ''
+        chgrp ${config.services.nginx.group} /var/lib/uacme/private/${cert.certName}
+        chmod 0710 /var/lib/uacme/private/${cert.certName}
+        chgrp ${config.services.nginx.group} /var/lib/uacme/private/${cert.certName}/key.pem
+        chmod 0640 /var/lib/uacme/private/${cert.certName}/key.pem
+      '') uacmeCertificates}
+
+      ${pkgs.systemd}/bin/systemctl restart nginx.service
+      exit 0
     '';
   };
 
