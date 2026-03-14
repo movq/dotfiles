@@ -120,11 +120,11 @@
     description = "Issue/renew mjones.io certificates with uacme";
     after = [ "network-online.target" ];
     wants = [ "network-online.target" ];
-    path = [ pkgs.bind pkgs.coreutils pkgs.curl pkgs.uacme ];
+    path = [ pkgs.bind.dnsutils pkgs.coreutils pkgs.curl pkgs.uacme ];
     serviceConfig.Type = "oneshot";
     script = ''
       set +e
-      export UACME_DIG_CMD=${pkgs.bind}/bin/dig
+      export UACME_DIG_CMD=${pkgs.bind.dnsutils}/bin/dig
       ${pkgs.uacme}/bin/uacme -v -c /var/lib/uacme -h ${./uacme-hook.sh} -t EC -b 256 -p shortlived issue mjones.io '*.mjones.io'
       rc=$?
       set -e
