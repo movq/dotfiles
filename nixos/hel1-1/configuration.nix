@@ -190,6 +190,7 @@ in
     experimental-features = [ "nix-command" "flakes" ];
     max-jobs = 6;
     keep-derivations = true;
+    keep-outputs = true;
   };
 
   system.stateVersion = "26.05";
