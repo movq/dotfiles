@@ -46,6 +46,8 @@ let
     unzip
     fzf
     android-tools
+    pv
+    bind.dnsutils
   ];
 in
   pkgs.buildEnv {
