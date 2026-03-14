@@ -186,9 +186,26 @@ in
     '';
   };
 
+  services.unbound = {
+    enable = true;
+    # Keep resolver changes scoped; Rspamd is pointed to localhost explicitly.
+    resolveLocalQueries = false;
+    settings.server.port = 5353;
+  };
+
   services.rspamd = {
     enable = true;
     postfix.enable = true;
+    locals."options.inc".text = ''
+      dns {
+        nameserver = ["127.0.0.1:5353"];
+      }
+    '';
+  };
+
+  systemd.services.rspamd = {
+    after = [ "unbound.service" ];
+    wants = [ "unbound.service" ];
   };
 
   systemd.tmpfiles.rules = [
