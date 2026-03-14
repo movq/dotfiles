@@ -13,6 +13,8 @@ let
     }
   ];
 
+  roundcubeHostName = "webmail.mjones.io";
+
   uacmeIssueArgs = cert:
     lib.concatStringsSep " " (builtins.map lib.escapeShellArg cert.domains);
 in
@@ -191,6 +193,21 @@ in
     '';
   };
 
+  # Roundcube reuses the system nginx service by extending virtualHosts.
+  services.roundcube = {
+    enable = true;
+    hostName = roundcubeHostName;
+
+    extraConfig = ''
+      $config['default_host'] = 'ssl://imap.ilmarin.net';
+      $config['default_port'] = 993;
+      $config['smtp_server'] = 'tls://smtp.ilmarin.net';
+      $config['smtp_port'] = 587;
+      $config['smtp_user'] = '%u';
+      $config['smtp_pass'] = '%p';
+    '';
+  };
+
   services.unbound = {
     enable = true;
     # Keep resolver changes scoped; Rspamd is pointed to localhost explicitly.
@@ -239,6 +256,13 @@ in
       locations."/" = {
         proxyPass = "http://127.0.0.1:5000";
       };
+    };
+    virtualHosts."${roundcubeHostName}" = {
+      enableACME = false;
+      forceSSL = true;
+      http2 = true;
+      sslCertificate = "/var/lib/uacme/mjones.io/cert.pem";
+      sslCertificateKey = "/var/lib/uacme/private/mjones.io/key.pem";
     };
   };
 
