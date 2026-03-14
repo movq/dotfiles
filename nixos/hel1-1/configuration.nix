@@ -124,6 +124,7 @@
     serviceConfig.Type = "oneshot";
     script = ''
       set +e
+      export UACME_DIG_CMD=${pkgs.bind}/bin/dig
       ${pkgs.uacme}/bin/uacme -v -c /var/lib/uacme -h ${./uacme-hook.sh} -t EC -b 256 -p shortlived issue mjones.io '*.mjones.io'
       rc=$?
       set -e

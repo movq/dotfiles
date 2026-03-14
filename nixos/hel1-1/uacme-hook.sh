@@ -21,6 +21,11 @@ if [ "$challenge_type" != "dns-01" ]; then
   exit 1
 fi
 
+if ! command -v "$dig_cmd" >/dev/null 2>&1; then
+  echo "DNS lookup command not found: $dig_cmd" >&2
+  exit 1
+fi
+
 api_key_file="/var/lib/uacme/private/pdns-api-key"
 dns_api="https://dns-api.mjones.io/api/v1/servers/localhost/zones/mjones.io."
 
@@ -52,9 +57,18 @@ pdns_patch() {
 txt_present() {
   name="$1"
   value="$2"
+  line=""
 
   txt="$($dig_cmd +time=2 +tries=1 +short TXT "$name" @"$dns_resolver" 2>/dev/null || true)"
-  printf '%s\n' "$txt" | sed -e 's/^"//' -e 's/"$//' | grep -Fx -- "$value" >/dev/null
+  for line in $txt; do
+    line=${line#\"}
+    line=${line%\"}
+    if [ "$line" = "$value" ]; then
+      return 0
+    fi
+  done
+
+  return 1
 }
 
 wait_for_txt_present() {
