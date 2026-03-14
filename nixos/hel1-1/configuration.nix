@@ -80,7 +80,7 @@ in
 
     nameservers = [ "185.12.64.1" "185.12.64.2" "2a01:4ff:ff00::add:1" "2a01:4ff:ff00::add:2" ];
   };
-  networking.firewall.allowedTCPPorts = [ 25 80 143 443 587 993 ];
+  networking.firewall.allowedTCPPorts = [ 25 80 143 443 465 587 993 ];
 
   time.timeZone = "Europe/London";
 
@@ -121,6 +121,7 @@ in
   services.postfix = {
     enable = true;
     enableSubmission = true;
+    enableSubmissions = true;
 
     mapFiles = {
       "virtual-domains" = ./mail/postfix-virtual-domains;
