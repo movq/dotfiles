@@ -1,0 +1,4 @@
+# List virtual aliases.
+# Format:
+#   alias@example.com user@example.com
+

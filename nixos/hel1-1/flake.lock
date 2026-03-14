@@ -1,0 +1,24 @@
+{
+  "nodes": {
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1773424450,
+        "narHash": "sha256-GPtDxOGlU9ieXqJlbJR81pTgwkIwq8hfJSeZU9wRQ/I=",
+        "rev": "f170c8a382605267ae7278eb336bf28bd5b856df",
+        "type": "tarball",
+        "url": "https://git.mjones.io/api/v1/repos/mike/nixpkgs/archive/f170c8a382605267ae7278eb336bf28bd5b856df.tar.gz"
+      },
+      "original": {
+        "type": "tarball",
+        "url": "https://git.mjones.io/mike/nixpkgs/archive/master.tar.gz"
+      }
+    },
+    "root": {
+      "inputs": {
+        "nixpkgs": "nixpkgs"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}

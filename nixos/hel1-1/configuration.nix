@@ -76,7 +76,7 @@ in
 
     nameservers = [ "185.12.64.1" "185.12.64.2" "2a01:4ff:ff00::add:1" "2a01:4ff:ff00::add:2" ];
   };
-  networking.firewall.allowedTCPPorts = [ 80 443 ];
+  networking.firewall.allowedTCPPorts = [ 25 80 143 443 587 993 ];
 
   time.timeZone = "Europe/London";
 
@@ -113,6 +113,88 @@ in
     port = 5000;
     secretKeyFile = "/var/cache-priv-key.pem";
   };
+
+  services.postfix = {
+    enable = true;
+    enableSubmission = true;
+
+    mapFiles = {
+      "virtual-domains" = ./mail/postfix-virtual-domains;
+      "virtual-aliases" = ./mail/postfix-virtual-aliases;
+    };
+
+    settings.main = {
+      myhostname = "hel1-1.ilmarin.net";
+      mydomain = "ilmarin.net";
+      myorigin = "$mydomain";
+
+      virtual_mailbox_domains = [ "hash:/etc/postfix/virtual-domains" ];
+      virtual_alias_maps = [ "hash:/etc/postfix/virtual-aliases" ];
+      virtual_transport = "lmtp:unix:private/dovecot-lmtp";
+
+      smtpd_relay_restrictions = [
+        "permit_mynetworks"
+        "permit_sasl_authenticated"
+        "reject_unauth_destination"
+      ];
+
+      smtpd_tls_security_level = "may";
+      smtpd_tls_cert_file = "/var/lib/uacme/ilmarin.net/cert.pem";
+      smtpd_tls_key_file = "/var/lib/uacme/private/ilmarin.net/key.pem";
+
+      smtpd_sasl_auth_enable = "yes";
+      smtpd_sasl_type = "dovecot";
+      smtpd_sasl_path = "private/auth";
+    };
+  };
+
+  services.dovecot2 = {
+    enable = true;
+    enableLmtp = true;
+    enablePAM = false;
+
+    sslServerCert = "/var/lib/uacme/ilmarin.net/cert.pem";
+    sslServerKey = "/var/lib/uacme/private/ilmarin.net/key.pem";
+
+    extraConfig = ''
+      passdb {
+        driver = passwd-file
+        args = username_format=%u /var/lib/dovecot2/passwd
+      }
+
+      userdb {
+        driver = passwd-file
+        args = username_format=%u /var/lib/dovecot2/passwd
+      }
+
+      service auth {
+        user = root
+        unix_listener /var/lib/postfix/queue/private/auth {
+          mode = 0660
+          user = postfix
+          group = postfix
+        }
+      }
+
+      service lmtp {
+        unix_listener /var/lib/postfix/queue/private/dovecot-lmtp {
+          mode = 0600
+          user = postfix
+          group = postfix
+        }
+      }
+    '';
+  };
+
+  services.rspamd = {
+    enable = true;
+    postfix.enable = true;
+  };
+
+  systemd.tmpfiles.rules = [
+    "d /var/lib/dovecot2 0750 root root -"
+    "f /var/lib/dovecot2/passwd 0600 root root -"
+  ];
 
   services.nginx = {
     enable = true;
