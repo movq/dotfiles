@@ -28,7 +28,7 @@ if ! command -v "$dig_cmd" >/dev/null 2>&1; then
 fi
 
 api_key_file="/var/lib/uacme/private/pdns-api-key"
-dns_api="https://dns-api.mjones.io/api/v1/servers/localhost/zones/mjones.io."
+dns_api="https://dns-api.mjones.io/api/v1/servers/localhost/zones/$ident."
 
 if [ ! -r "$api_key_file" ]; then
   echo "missing PowerDNS API key file: $api_key_file" >&2
