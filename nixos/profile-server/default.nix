@@ -3,8 +3,8 @@
 }:
 let
   lctPkg = import (builtins.fetchTarball {
-    url = https://git.mjones.io/mike/lct/archive/master.tar.gz;
-    sha256 = "1xsscyikx2jxc3ca34ll5vdl4bw7rd9gqcv81l12c56mrmzckbr4";
+    url = https://git.mjones.io/mike/lct/archive/8d0967ffbc61442f8e45da761a925460ec02701a.tar.gz;
+    sha256 = "1cd30fwc0qpyvyc9slv5ry3xzyhkkc1saqp8sss2r38fbwawlpd1";
   }) { inherit pkgs; };
 
   myPackages = with pkgs; [
