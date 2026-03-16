@@ -98,6 +98,10 @@ in
   boot.kernelParams = [ "mitigations=off" ];
 
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
+  nixpkgs.config.permittedInsecurePackages = [
+    "olm-3.2.16"
+  ];
+
   hardware.cpu.amd.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
 
   boot.loader.grub.enable = true;
@@ -444,6 +448,15 @@ in
       sslCertificateKey = "/var/lib/uacme/private/mjones.io/key.pem";
       locations."/" = {
         proxyPass = "http://127.0.0.1:5000";
+      };
+    };
+    virtualHosts."nix-cache-j.mjones.io" = {
+      forceSSL = true;
+      http2 = true;
+      sslCertificate = "/var/lib/uacme/mjones.io/cert.pem";
+      sslCertificateKey = "/var/lib/uacme/private/mjones.io/key.pem";
+      locations."/" = {
+        root = "/srv/nix-cache-j";
       };
     };
     virtualHosts."mjones.io" = {
