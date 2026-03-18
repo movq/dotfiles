@@ -10,7 +10,7 @@ let
       "-Dlocalstatedir=/home/jom9cbg/nix/var"
     ];
 
-    customNix = prev.nixVersions.stable.overrideScope (_: nixPrev: {
+    customNix = prev.nixVersions.latest.overrideScope (_: nixPrev: {
       nix-store = nixPrev.nix-store.overrideAttrs (old: {
         mesonFlags = (old.mesonFlags or [ ]) ++ commonFlags ++ [
           "-Dstore-dir=/home/jom9cbg/nix/store"
@@ -71,6 +71,7 @@ let
     grim
     slurp
     librewolf
+    llvmPackages.clang-tools
   ];
 in
   pkgs.buildEnv {
