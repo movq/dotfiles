@@ -7,11 +7,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1772903416,
-        "narHash": "sha256-JK/Jfs3VFCYCDWgz/FLLhy9C2y6UkqHYYF2KPqNnWvc=",
-        "rev": "06440cda7cad3e717660e799e11a3941b6c41da2",
+        "lastModified": 1773673799,
+        "narHash": "sha256-oV3KFV8OjSy01uhipQObE/rfh89lU52Y3/5iwLgDo7E=",
+        "rev": "8d0967ffbc61442f8e45da761a925460ec02701a",
         "type": "tarball",
-        "url": "https://git.mjones.io/api/v1/repos/mike/lct/archive/06440cda7cad3e717660e799e11a3941b6c41da2.tar.gz"
+        "url": "https://git.mjones.io/api/v1/repos/mike/lct/archive/8d0967ffbc61442f8e45da761a925460ec02701a.tar.gz"
       },
       "original": {
         "type": "tarball",
@@ -20,11 +20,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1773424450,
-        "narHash": "sha256-GPtDxOGlU9ieXqJlbJR81pTgwkIwq8hfJSeZU9wRQ/I=",
-        "rev": "f170c8a382605267ae7278eb336bf28bd5b856df",
+        "lastModified": 1774004729,
+        "narHash": "sha256-YTMDD85RS53XxxlSXaUXXZvbwoDk0fMuKKWMwGFZgv0=",
+        "rev": "794b457a45b74d2cd3bca6a63d69c15a450e4d58",
         "type": "tarball",
-        "url": "https://git.mjones.io/api/v1/repos/mike/nixpkgs/archive/f170c8a382605267ae7278eb336bf28bd5b856df.tar.gz"
+        "url": "https://git.mjones.io/api/v1/repos/mike/nixpkgs/archive/794b457a45b74d2cd3bca6a63d69c15a450e4d58.tar.gz"
       },
       "original": {
         "type": "tarball",
