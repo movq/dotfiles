@@ -128,6 +128,7 @@ in
       fsType = "btrfs";
       options = [ "subvol=/" "compress-force=zstd:3" ];
     };
+  boot.tmp.cleanOnBoot = true;
 
   swapDevices = [ ];
 
