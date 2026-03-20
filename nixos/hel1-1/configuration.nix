@@ -449,6 +449,16 @@ in
       locations."/" = {
         proxyPass = "http://127.0.0.1:5000";
       };
+      extraConfig = ''
+        gzip on;
+        gzip_static on;
+        gzip_vary on;
+        gzip_comp_level 5;
+        gzip_min_length 256;
+        gzip_proxied expired no-cache no-store private auth;
+        gzip_types text/plain text/x-nix-narinfo application/octet-stream;
+    '';
+
     };
     virtualHosts."nix-cache-j.mjones.io" = {
       forceSSL = true;
