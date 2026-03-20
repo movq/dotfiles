@@ -20,11 +20,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1774004729,
-        "narHash": "sha256-YTMDD85RS53XxxlSXaUXXZvbwoDk0fMuKKWMwGFZgv0=",
-        "rev": "794b457a45b74d2cd3bca6a63d69c15a450e4d58",
+        "lastModified": 1774011555,
+        "narHash": "sha256-gbYFTUQgAB9gWR+8J/Onc/aotM1OVjvlCsAZpBvS6a0=",
+        "rev": "09c6c3d66ab65557ade3b3eb673f5bcb188f601b",
         "type": "tarball",
-        "url": "https://git.mjones.io/api/v1/repos/mike/nixpkgs/archive/794b457a45b74d2cd3bca6a63d69c15a450e4d58.tar.gz"
+        "url": "https://git.mjones.io/api/v1/repos/mike/nixpkgs/archive/09c6c3d66ab65557ade3b3eb673f5bcb188f601b.tar.gz"
       },
       "original": {
         "type": "tarball",
