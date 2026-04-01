@@ -2,11 +2,11 @@
   "nodes": {
     "nixpkgs": {
       "locked": {
-        "lastModified": 1773424450,
-        "narHash": "sha256-GPtDxOGlU9ieXqJlbJR81pTgwkIwq8hfJSeZU9wRQ/I=",
-        "rev": "f170c8a382605267ae7278eb336bf28bd5b856df",
+        "lastModified": 1774011555,
+        "narHash": "sha256-gbYFTUQgAB9gWR+8J/Onc/aotM1OVjvlCsAZpBvS6a0=",
+        "rev": "09c6c3d66ab65557ade3b3eb673f5bcb188f601b",
         "type": "tarball",
-        "url": "https://git.mjones.io/api/v1/repos/mike/nixpkgs/archive/f170c8a382605267ae7278eb336bf28bd5b856df.tar.gz"
+        "url": "https://git.mjones.io/api/v1/repos/mike/nixpkgs/archive/09c6c3d66ab65557ade3b3eb673f5bcb188f601b.tar.gz"
       },
       "original": {
         "type": "tarball",
