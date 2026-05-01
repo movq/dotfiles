@@ -64,16 +64,9 @@ vim.g.rust_recommended_style = false
 vim.cmd("autocmd FileType text lua require 'cmp'.setup.buffer { sources = {} }")
 vim.cmd("autocmd FileType yaml setlocal indentkeys-=0#")
 
----------------------------------------------------------------------------------------------------
 
-require("onedark").setup({
-	style = "darker",
-	colors = {
-		bg0 = "#000000",
-		bg1 = "#151515",
-	},
-})
-require("onedark").load()
+vim.cmd.colorscheme 'retrobox'
+
 require("auto-save").setup()
 
 vim.o.sessionoptions="blank,buffers,curdir,folds,help,tabpages,winsize,winpos,terminal,localoptions"
@@ -81,121 +74,10 @@ require("auto-session").setup({
     suppressed_dirs = { "~/", "~/src", "~/data", "~/downloads", "/"},
 })
 
-local lualine_custom_onedark = require("lualine.themes.onedark")
-
-lualine_custom_onedark.normal.a.bg = '#000000'
-lualine_custom_onedark.normal.a.fg = '#c6c8c6'
-lualine_custom_onedark.normal.b.bg = '#000000'
-lualine_custom_onedark.normal.c.bg = '#000000'
-lualine_custom_onedark.insert.a.bg = '#000000'
-lualine_custom_onedark.insert.a.fg = '#c6c8c6'
-lualine_custom_onedark.visual.a.bg = '#000000'
-lualine_custom_onedark.command.a.bg = '#000000'
-lualine_custom_onedark.command.a.fg = '#c6c8c6'
-
-require("lualine").setup({
-    options = {
-        theme = lualine_custom_onedark,
-        component_separators = { left = ' ', right = ' '},
-        section_separators = { left = ' ', right = ' '},
-    },
-  sections = {
-    lualine_a = {'mode'},
-    lualine_b = {'filename'},
-    lualine_c = {'diff', 'diagnostics', {'lsp_status', icon=''}},
-    lualine_x = {'branch', 'encoding', 'fileformat', 'filetype'},
-    lualine_y = {'progress'},
-    lualine_z = {'location'}
-  },
-})
-
-require("neo-tree").setup({
-    source_selector = {
-        winbar = true,
-        statusline = false,
-        sources = {
-          { source = "filesystem" },
-          { source = "buffers" },
-          { source = "document_symbols" },
-          -- { source = "git_status" },
-        },
-    },
-    window = {
-        width = 30,
-    },
-    filesystem = {
-        follow_current_file = {
-            enabled = true,
-        },
-    },
-    buffers = {
-        follow_current_file = {
-            enabled = true,
-        },
-    },
-    sources = {"filesystem", "buffers", "document_symbols"},
-      mappings = {
-        ["<C-a>"] = "close_window",
-        ["<C-e>"] = "close_window",
-        ["<space>"] = {
-            "toggle_node",
-            nowait = false, -- disable `nowait` if you have existing combos starting with this char that you want to use 
-        },
-        ["<2-LeftMouse>"] = "open",
-        ["<cr>"] = "open",
-        ["<esc>"] = "cancel", -- close preview or floating neo-tree window
-        ["P"] = { "toggle_preview", config = { use_float = true, use_image_nvim = true } },
-        -- Read `# Preview Mode` for more information
-        ["l"] = "focus_preview",
-        ["S"] = "open_split",
-        ["s"] = "open_vsplit",
-        -- ["S"] = "split_with_window_picker",
-        -- ["s"] = "vsplit_with_window_picker",
-        ["t"] = "open_tabnew",
-        -- ["<cr>"] = "open_drop",
-        -- ["t"] = "open_tab_drop",
-        ["w"] = "open_with_window_picker",
-        --["P"] = "toggle_preview", -- enter preview mode, which shows the current node without focusing
-        ["C"] = "close_node",
-        -- ['C'] = 'close_all_subnodes',
-        ["z"] = "close_all_nodes",
-        --["Z"] = "expand_all_nodes",
-        ["a"] = {
-          "add",
-          -- this command supports BASH style brace expansion ("x{a,b,c}" -> xa,xb,xc). see `:h neo-tree-file-actions` for details
-          -- some commands may take optional config options, see `:h neo-tree-mappings` for details
-          config = {
-            show_path = "none" -- "none", "relative", "absolute"
-          }
-        },
-        ["A"] = "add_directory", -- also accepts the optional config.show_path option like "add". this also supports BASH style brace expansion.
-        ["d"] = "delete",
-        ["r"] = "rename",
-        ["y"] = "copy_to_clipboard",
-        ["x"] = "cut_to_clipboard",
-        ["p"] = "paste_from_clipboard",
-        ["c"] = "copy", -- takes text input for destination, also accepts the optional config.show_path option like "add":
-        -- ["c"] = {
-        --  "copy",
-        --  config = {
-        --    show_path = "none" -- "none", "relative", "absolute"
-        --  }
-        --}
-        ["m"] = "move", -- takes text input for destination, also accepts the optional config.show_path option like "add".
-        ["q"] = "close_window",
-        ["R"] = "refresh",
-        ["?"] = "show_help",
-        ["<"] = "prev_source",
-        [">"] = "next_source",
-        ["i"] = "show_file_details",
-      }
-})
-
-require("bufferline").setup{}
-
-require("gitsigns").setup()
-
 require("telescope").setup({
+    defaults = {
+        path_display = {"truncate"},
+    },
 	pickers = {
 		buffers = {
 			sort_lastused = true,
@@ -206,30 +88,6 @@ require("telescope").setup({
 vim.g.symbols_outline = {
 	symbol_blacklist = { "Variable" },
 }
-
-require("nvim-treesitter.configs").setup({
-	ensure_installed = {
-		"c",
-		"cpp",
-		"cuda",
-		"go",
-		"haskell",
-		"javascript",
-		"lua",
-		"ocaml",
-		"python",
-		"rust",
-		"typescript",
-		"vim",
-		"yaml",
-	},
-    sync_install = true,
-    auto_install = false,
-	highlight = {
-		enable = true,
-		additional_vim_regex_highlighting = false,
-	},
-})
 
 vim.o.winborder = 'rounded'
 
@@ -246,11 +104,6 @@ cmp.setup({
 	enabled = function()
         return vim.api.nvim_get_option_value("buftype", {buf = 0 }) ~= "prompt"
 	end,
-	snippet = {
-		expand = function(args)
-			require("luasnip").lsp_expand(args.body)
-		end,
-	},
 	mapping = cmp.mapping.preset.insert({
 		["<C-n>"] = {
 			i = cmp.mapping.select_next_item({ behavior = cmp.SelectBehavior.Select }),
@@ -267,28 +120,19 @@ cmp.setup({
 		["<C-e>"] = cmp.mapping.close(),
 		["<CR>"] = cmp.mapping.confirm({ select = false }), -- Accept currently selected item. Set `select` to `false` to only confirm explicitly selected items.
 		["<Tab>"] = cmp.mapping(function(fallback)
-            local luasnip = require("luasnip")
-			if luasnip.expand_or_jumpable() then
-				luasnip.expand_or_jump()
-            elseif has_words_before() then
+            if has_words_before() then
 				cmp.complete()
 			else
 				fallback()
 			end
 		end, { "i", "s" }),
 		["<S-Tab>"] = cmp.mapping(function(fallback)
-			local luasnip = require("luasnip")
-			if luasnip.jumpable(-1) then
-            	luasnip.jump(-1)
-			else
-				fallback()
-			end
+            fallback()
 		end, { "i", "s" }),
 	}),
 	sources = {
 		{ name = "copilot" },
 		{ name = "nvim_lsp" },
-		{ name = "luasnip" },
 		{ name = "buffer" },
 	},
 	sorting = {
@@ -328,8 +172,8 @@ cmp.setup.filetype("txt", {
 
 -- LSP configurations
 vim.lsp.config['clangd'] = {
-    cmd = { 'clangd' },
-    filetypes = { 'c', 'cpp' },
+    cmd = { 'clangd', '--background-index', '--query-driver=\'/usr/bin/\'' },
+    filetypes = { 'c', 'cpp', 'cuda' },
     root_markers = { 'compile_commands.json', '.git' },
 }
 vim.lsp.enable('clangd')
@@ -363,22 +207,6 @@ vim.lsp.config['luals'] = {
 }
 vim.lsp.enable('luals')
 
-vim.lsp.config['pyright'] = {
-    cmd = { 'pyright-langserver', '--stdio' },
-    filetypes = { 'python' },
-    root_markers = { 'setup.py', 'pyproject.toml', '.git' },
-    settings = {
-      python = {
-        analysis = {
-          autoSearchPaths = true,
-          useLibraryCodeForTypes = true,
-          diagnosticMode = 'openFilesOnly',
-        },
-      },
-  },
-}
-vim.lsp.enable('pyright')
-
 vim.lsp.config['gopls'] = {
     cmd = { 'gopls' },
     filetypes = { 'go', 'gomod', 'gowork', 'gotmpl' },
@@ -410,6 +238,13 @@ vim.lsp.config['zls'] = {
 }
 vim.lsp.enable('zls')
 
+vim.lsp.config['ty'] = {
+    cmd = { 'ty', 'server' },
+    filetypes = { 'python' },
+    root_markers = { 'pyproject.toml', 'setup.py', '.git' },
+}
+vim.lsp.enable('ty')
+
 vim.api.nvim_create_autocmd('LspAttach', {
     callback = function(args)
       -- vim.keymap.del('n', 'K', { buffer = args.buf })
@@ -432,19 +267,40 @@ vim.api.nvim_set_hl(0, 'TrailingWhitespace', { bg = 'LightRed' })
 
 local trailing_ws_state = {}
 
+local function clear_trailing_ws(win)
+    if trailing_ws_state[win] then
+        for _, id in ipairs(trailing_ws_state[win].matches) do
+            pcall(vim.fn.matchdelete, id)
+        end
+        trailing_ws_state[win] = nil
+    end
+end
+
+local function should_highlight_trailing_ws(win)
+    local buf = vim.api.nvim_win_get_buf(win)
+    local bt = vim.api.nvim_get_option_value('buftype', { buf = buf })
+    if bt ~= '' then
+        return false
+    end
+
+    local cfg = vim.api.nvim_win_get_config(win)
+    return cfg.relative == ''
+end
+
 local function update_trailing_ws()
     local win = vim.api.nvim_get_current_win()
+    if not should_highlight_trailing_ws(win) then
+        clear_trailing_ws(win)
+        return
+    end
+
     local cur_line = vim.fn.line('.')
 
     if trailing_ws_state[win] and trailing_ws_state[win].line == cur_line then
         return
     end
 
-    if trailing_ws_state[win] then
-        for _, id in ipairs(trailing_ws_state[win].matches) do
-            pcall(vim.fn.matchdelete, id)
-        end
-    end
+    clear_trailing_ws(win)
 
     local matches = {}
     if cur_line > 1 then
@@ -466,8 +322,3 @@ vim.api.nvim_create_autocmd('WinClosed', {
         trailing_ws_state[tonumber(args.match)] = nil
     end,
 })
--- require("copilot").setup({
---   suggestion = { enabled = false },
---   panel = { enabled = false },
--- })
--- require("copilot_cmp").setup()
