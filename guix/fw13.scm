@@ -114,7 +114,7 @@ applications needing access to be root.")
   (kernel-arguments (append (list "mitigations=off" "amdgpu.dcdebugmask=0x10"
                                   "resume=/dev/mapper/nvme0n1p2-crypt" "resume_offset=13378816")
                             %default-kernel-arguments))
-  (initrd-modules (list "nvme" "aesni-intel" "dm-crypt" "crc32c-generic" "crc32c-intel" "btrfs"))
+  (initrd-modules (list "nvme" "aesni-intel" "dm-crypt" "btrfs"))
   (firmware (list nongnu:amdgpu-firmware nongnu:mediatek-firmware))
   (host-name "mike-framework")
   (timezone "Europe/London")
@@ -265,11 +265,8 @@ applications needing access to be root.")
                                             (authorize-key? #t)
                                             (authorized-keys
                                              (list
-                                               (plain-file "berlin.pub" "(public-key(ecc(curve Ed25519)(q #8D156F295D24B0D9A86FA5741A840FF2D24F60F7B6C4134814AD55625971B394#)))")
-                                               (plain-file "bordeaux.pub" "(public-key(ecc(curve Ed25519)(q #7D602902D3A2DBB83F8A0FB98602A754C5493B0B778C8D1DD4E0F41DE14DE34F#)))")
-                                               (plain-file "alienware.pub" "(public-key(ecc(curve Ed25519)(q #C1C11891A5AC0C66DF15B76DEA19A37168B3963AD5246D9830B6A45095EF2C9B#)))")
-                                               (plain-file "sv1.pub" "(public-key(ecc(curve Ed25519)(q #C764270F086A95B3A873BAE629797C37D64F068A0EBA1C036C3A8E6841C5AB4B#)))")))
-                                            (extra-options '("--gc-keep-derivations=yes" "--gc-keep-outputs=yes"))))
+                                               (plain-file "mike.pub" "(public-key(ecc(curve Ed25519)(q #C764270F086A95B3A873BAE629797C37D64F068A0EBA1C036C3A8E6841C5AB4B#)))")))
+                                            (extra-options '("--gc-keep-derivations=no" "--gc-keep-outputs=no"))))
                         (sysctl-service-type config =>
                                              (sysctl-configuration
                                                (settings (append '(("kernel.sysrq" . "1")
