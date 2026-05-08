@@ -134,47 +134,48 @@ applications needing access to be root.")
      (target "nvme0n1p2-crypt")
      (type luks-device-mapping))))
 
-  (file-systems (append
-                 (list (file-system
-                         (device (uuid "2ccc0c18-b649-49ae-bc5c-618de8bbb3d5"))
-                         (mount-point "/")
-                         (type "btrfs")
-                         (flags '(no-atime))
-                         (options "subvol=/guix,compress-force=zstd:3,nodiscard")
-                         (dependencies mapped-devices))
-                       (file-system
-                         (device (uuid "2ccc0c18-b649-49ae-bc5c-618de8bbb3d5"))
-                         (mount-point "/home")
-                         (type "btrfs")
-                         (flags '(no-atime))
-                         (options "subvol=/home,compress-force=zstd:3,nodiscard")
-                         (dependencies mapped-devices))
-                       (file-system
-                         (device (uuid "2ccc0c18-b649-49ae-bc5c-618de8bbb3d5"))
-                         (mount-point "/mnt/rootvol")
-                         (type "btrfs")
-                         (flags '(no-atime))
-                         (options "subvol=/,compress-force=zstd:3,nodiscard")
-                         (dependencies mapped-devices))
-                       (file-system
-                         (device (uuid "454A-A115" 'fat))
-                         (mount-point "/efi")
-                         (type "vfat"))
-                       (file-system
-                         (device "none")
-                         (mount-point "/run/user")
-                         (type "tmpfs")
-                         (check? #f)
-                         (flags '(no-suid no-dev no-exec))
-                         (options "mode=0755")
-                         (create-mount-point? #t))
-                       (file-system
-                         (device "none")
-                         (mount-point "/home/mike/.cache/thumbnails")
-                         (type "tmpfs")
-                         (check? #f)
-                         (options "uid=1000,gid=1000,mode=0755")))
-                 %base-file-systems))
+  (file-systems
+    (append
+      (list (file-system
+              (device (uuid "2ccc0c18-b649-49ae-bc5c-618de8bbb3d5"))
+              (mount-point "/")
+              (type "btrfs")
+              (flags '(no-atime))
+              (options "subvol=/guix,compress-force=zstd:3,nodiscard")
+              (dependencies mapped-devices))
+            (file-system
+              (device (uuid "2ccc0c18-b649-49ae-bc5c-618de8bbb3d5"))
+              (mount-point "/home")
+              (type "btrfs")
+              (flags '(no-atime))
+              (options "subvol=/home,compress-force=zstd:3,nodiscard")
+              (dependencies mapped-devices))
+            (file-system
+              (device (uuid "2ccc0c18-b649-49ae-bc5c-618de8bbb3d5"))
+              (mount-point "/mnt/rootvol")
+              (type "btrfs")
+              (flags '(no-atime))
+              (options "subvol=/,compress-force=zstd:3,nodiscard")
+              (dependencies mapped-devices))
+            (file-system
+              (device (uuid "454A-A115" 'fat))
+              (mount-point "/boot/efi")
+              (type "vfat"))
+            (file-system
+              (device "none")
+              (mount-point "/run/user")
+              (type "tmpfs")
+              (check? #f)
+              (flags '(no-suid no-dev no-exec))
+              (options "mode=0755")
+              (create-mount-point? #t))
+            (file-system
+              (device "none")
+              (mount-point "/home/mike/.cache/thumbnails")
+              (type "tmpfs")
+              (check? #f)
+              (options "uid=1000,gid=1000,mode=0755")))
+      %base-file-systems))
   (swap-devices
   (list
     (swap-space
@@ -257,15 +258,17 @@ applications needing access to be root.")
 
   (services
    (let ((my-services (modify-services %base-services
+                        (delete console-font-service-type)
                         (guix-service-type config =>
                                            (guix-configuration
                                             (inherit config)
                                             (substitute-urls
-                                             (list))
+                                             (list "https://guix.mjones.io"))
                                             (authorize-key? #t)
                                             (authorized-keys
                                              (list
-                                               (plain-file "mike.pub" "(public-key(ecc(curve Ed25519)(q #C764270F086A95B3A873BAE629797C37D64F068A0EBA1C036C3A8E6841C5AB4B#)))")))
+                                               (plain-file "mike.pub"
+                                                           "(public-key(ecc(curve Ed25519)(q #0B12B338EF397DCBC1F7C32DF5181C018FD9208312D001E9DD00E2F0D0A08A82# )))")))
                                             (extra-options '("--gc-keep-derivations=no" "--gc-keep-outputs=no"))))
                         (sysctl-service-type config =>
                                              (sysctl-configuration
@@ -284,7 +287,6 @@ applications needing access to be root.")
               (extra-special-file "/etc/alsa/conf.d/99-pipewire-default.conf"
                 (file-append pipewire "/share/alsa/alsa.conf.d/99-pipewire-default.conf"))
 
-              ;polkit-wheel-service
               fontconfig-file-system-service
               (service network-manager-no-polkit-service-type)
               (service wpa-supplicant-service-type)
@@ -292,18 +294,6 @@ applications needing access to be root.")
                        (openssh-configuration
                         (openssh openssh-sans-x)))
 
-              ;(service polkit-service-type)
-              #;
-              (simple-service 'polkit-wheel-all polkit-service-type
-                (list (file-union "polkit-wheel-all"
-                                  `(("share/polkit-1/rules.d/00-wheel-all.rules"
-                                     ,(plain-file "00-wheel-all.rules"
-"polkit.addRule(function(action, subject) {
-    if (subject.isInGroup(\"wheel\")) {
-        return polkit.Result.YES;
-    }
-});
-"))))))
               (simple-service 'doas-config etc-service-type
                 (list `("doas.conf" ,(plain-file "doas.conf" "permit nopass keepenv nolog :wheel\n"))))
               (service seatd-without-elogind-service-type)
@@ -318,18 +308,18 @@ applications needing access to be root.")
               (udev-rules-service 'brightness brightnessctl)
               (udev-rules-service 'android android-udev-rules #:groups '("adbusers"))
 
-             (service subids-service-type
-               (subids-configuration
-                (add-root? #f)))
-             (simple-service 'mike-subids
-                subids-service-type
-                (subids-extension
-                  (subgids
-                   (list
-                    (subid-range (name "mike"))))
-                  (subuids
-                   (list
-                    (subid-range (name "mike")))))))
+              (service subids-service-type
+                (subids-configuration
+                 (add-root? #f)))
+              (simple-service 'mike-subids
+                 subids-service-type
+                 (subids-extension
+                   (subgids
+                    (list
+                     (subid-range (name "mike"))))
+                   (subuids
+                    (list
+                     (subid-range (name "mike")))))))
              my-services)))
   (privileged-programs
     (append (list (privileged-program
