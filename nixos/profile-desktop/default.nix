@@ -1,53 +1,74 @@
+let overlay = final: prev: {
+};
+in
 {
-  pkgs ? import <nixpkgs> {},
+  pkgs ? import <nixpkgs> { overlays = [ overlay ]; },
 }:
 let
   lctPkg = import (builtins.fetchTarball {
-    url = https://git.mjones.io/mike/lct/archive/8d0967ffbc61442f8e45da761a925460ec02701a.tar.gz;
-    sha256 = "1cd30fwc0qpyvyc9slv5ry3xzyhkkc1saqp8sss2r38fbwawlpd1";
+    url = https://git.mjones.io/mike/lct/archive/b7a1df6d6b9e552f6e8f8872199fa5a2fc42c715.tar.gz;
+    sha256 = "0x92jqljdj5q6b494viqzzq7awispp5nq45fznbwrm86wlggnhdk";
   }) { inherit pkgs; };
 
   myPackages = with pkgs; [
-    fish
-    rclone
-    git
+    android-tools
+    bash
+    bees
+    bind.dnsutils
+    binutils
+    bubblewrap
+    compsize
+    coreutils
     curl
-    jq
-    ripgrep
+    dejavu_fonts
+    delta
     fd
+    ffmpegthumbnailer
+    file
+    fish
+    fontconfig
+    foot
+    fuzzel
+    fzf
+    gawk
+    git
+    gnugrep
+    gnused
+    gsettings-desktop-schemas
     htop
-    neovim
+    i3status
+    imv
+    jq
     jujutsu
     lctPkg
-    bubblewrap
-    ncpamixer
-    pcmanfm-qt
-    wlsunset
-    binutils
-    mpv
-    imv
-    qbittorrent
+    less
     librewolf
-    i3status
-    sox
-    compsize
-    python3
-    fuzzel
-    wl-clipboard
-    qt6Packages.qtstyleplugin-kvantum
-    qt6Packages.qt6ct
-    papirus-icon-theme
+    mpv
+    mtools
+    ncpamixer
+    neovim
     noto-fonts-lgc-plus
-    wireguard-tools
-    ffmpegthumbnailer
-    tmux
-    delta
-    file
-    unzip
-    fzf
-    android-tools
+    papirus-icon-theme
+    pcmanfm-qt
+    pipewire
     pv
-    bind.dnsutils
+    python3
+    qbittorrent
+    qemu
+    qt6Packages.qt6ct
+    qt6Packages.qtstyleplugin-kvantum
+    rclone
+    ripgrep
+    sox
+    sway
+    tmux
+    tokei
+    unzip
+    util-linux
+    wireguard-tools
+    wireplumber
+    wl-clipboard
+    wlsunset
   ];
 in
   pkgs.buildEnv {
