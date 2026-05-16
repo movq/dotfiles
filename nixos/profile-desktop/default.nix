@@ -2,7 +2,7 @@ let overlay = final: prev: {
 };
 in
 {
-  pkgs ? import <nixpkgs> { overlays = [ overlay ]; },
+  pkgs ? import <nixpkgs> { overlays = [ ]; },
 }:
 let
   lctPkg = import (builtins.fetchTarball {
@@ -16,12 +16,14 @@ let
     bees
     bind.dnsutils
     binutils
+    btrfs-progs
     bubblewrap
     compsize
     coreutils
     curl
     dejavu_fonts
     delta
+    e2fsprogs
     fd
     ffmpegthumbnailer
     file
@@ -34,6 +36,9 @@ let
     git
     gnugrep
     gnused
+    gnutar
+    grub2
+    grub2_efi
     gsettings-desktop-schemas
     htop
     i3status
@@ -48,6 +53,8 @@ let
     ncpamixer
     neovim
     noto-fonts-lgc-plus
+    openssh
+    OVMF.fd
     papirus-icon-theme
     pcmanfm-qt
     pipewire
@@ -61,6 +68,7 @@ let
     ripgrep
     sox
     sway
+    swtpm
     tmux
     tokei
     unzip
