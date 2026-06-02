@@ -48,6 +48,7 @@ let
     lctPkg
     less
     librewolf
+    mandoc
     mpv
     mtools
     ncpamixer
