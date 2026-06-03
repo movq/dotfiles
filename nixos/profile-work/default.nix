@@ -27,13 +27,10 @@ let
 
   pkgs = pkgsFun {
     inherit system;
-    overlays = [ nixOverlay ];
+    # overlays = [ nixOverlay ];
+    overlays = [ ];
   };
 
-  lctPkg = import (builtins.fetchTarball {
-    url = https://git.mjones.io/mike/lct/archive/8d0967ffbc61442f8e45da761a925460ec02701a.tar.gz;
-    sha256 = "1cd30fwc0qpyvyc9slv5ry3xzyhkkc1saqp8sss2r38fbwawlpd1";
-  }) { inherit pkgs; };
   myPackages = with pkgs; [
     fish
     rclone
@@ -45,7 +42,7 @@ let
     htop
     neovim
     jujutsu
-    lctPkg
+    lct
     bubblewrap
     binutils
     sox
@@ -63,14 +60,7 @@ let
     glibc
     uv
     ty
-    sway
-    fuzzel
-    foot
-    i3status
     glibcLocales
-    grim
-    slurp
-    librewolf
     llvmPackages.clang-tools
   ];
 in
