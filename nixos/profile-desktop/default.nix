@@ -59,6 +59,7 @@ let
     papirus-icon-theme
     pcmanfm-qt
     pipewire
+    pulseaudio
     pv
     python3
     qbittorrent
