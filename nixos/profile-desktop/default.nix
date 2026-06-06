@@ -68,6 +68,7 @@ let
     rclone
     ripgrep
     sox
+    strace
     sway
     swtpm
     tmux
