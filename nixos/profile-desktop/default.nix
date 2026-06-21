@@ -68,6 +68,7 @@ let
     qt6Packages.qtstyleplugin-kvantum
     rclone
     ripgrep
+    shared-mime-info
     sox
     strace
     sway
