@@ -1,0 +1,5 @@
+cross-x86_64-pc34-linux-gnu/linux-headers  multilib
+cross-x86_64-pc34-linux-gnu/glibc  multilib
+cross-x86_64-pc34-linux-gnu/binutils  multilib
+cross-x86_64-pc34-linux-gnu/gcc  multilib
+cross-x86_64-pc34-linux-gnu/gdb  multilib

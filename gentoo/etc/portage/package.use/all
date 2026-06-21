@@ -1,0 +1,74 @@
+dev-lang/python pgo
+llvm-core/* LLVM_TARGETS: X86 WebAssembly BPF AMDGPU
+dev-lang/rust system-llvm rust-analyzer rust-src clippy rustfmt
+media-libs/libvpx postproc
+media-video/wireplumber LUA_SINGLE_TARGET: lua5-4
+www-client/librewolf system-png system-pipewire -gmp-autoupdate eme-free
+gui-libs/wlroots X
+gui-wm/sway X tray
+media-libs/mesa X vulkan
+media-libs/libglvnd X
+media-libs/libepoxy X
+media-libs/libpng apng
+sys-auth/seatd server
+net-libs/nodejs npm
+media-video/pipewire bluetooth sound-server
+media-libs/freetype harfbuzz
+dev-qt/qtgui egl
+sys-libs/zlib minizip
+dev-qt/qtbase opengl
+dev-qt/qttools opengl
+dev-qt/qtdeclarative opengl
+app-misc/brightnessctl udev
+app-containers/podman seccomp
+net-firewall/iptables nftables
+app-text/poppler cairo
+x11-libs/cairo X
+dev-python/pycairo X
+dev-libs/libportal gtk
+gnome-base/nautilus -cloudproviders
+x11-libs/gdk-pixbuf jpeg gif tiff
+media-video/ffmpegthumbnailer gnome gtk jpeg png
+media-gfx/imv gif heif jpeg jpegxl png svg tiff webp
+media-libs/freeimage jpeg jpeg2k png tiff webp
+gnome-base/gvfs mtp
+sci-libs/openblas index-64bit
+app-arch/brotli python
+dev-python/pyqt5 gui network svg widgets
+media-sound/ncmpcpp taglib
+media-sound/mpd flac lame opus vorbis
+dev-libs/boost icu
+dev-lang/php curl
+net-libs/libssh server
+media-libs/gd truetype fontconfig
+net-misc/networkmanager iwd
+gui-apps/fuzzel svg png
+dev-libs/boehm-gc cxx
+sys-devel/gcc lto pgo
+sys-kernel/linux-firmware compress-zstd deduplicate
+media-fonts/noto -extra
+app-text/xmlto text
+x11-libs/libxkbcommon X
+media-libs/libva X
+media-libs/vulkan-loader X
+dev-libs/boost nls
+dev-libs/xmlsec nss
+media-libs/harfbuzz icu
+app-office/libreoffice -gtk3 gtk4 -mariadb
+sys-process/runit -scripts
+sys-apps/s6-linux-init -sysv-utils
+sys-fs/squashfs-tools lzma zstd
+app-emulation/qemu -pin-upstream-blobs seccomp gtk vte virgl zstd sdl opengl QEMU_SOFTMMU_TARGETS: x86_64 i386 aarch64 QEMU_USER_TARGETS: aarch64
+media-libs/libsdl2 gles2
+sys-firmware/sgabios -binary
+sys-firmware/ipxe -binary
+sys-boot/limine -bios-pxe -uefi-aarch64 -uefi-ia32 -uefi-loongarch64 -uefi-riscv64
+mail-client/roundcube postgres
+dev-lang/php intl pdo gd postgres
+app-misc/mime-types nginx
+dev-python/pillow webp
+dev-lang/php fpm
+app-eselect/eselect-php fpm
+net-im/synapse postgres
+mail-mta/postfix dovecot-sasl sasl
+net-mail/dovecot sieve

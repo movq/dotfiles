@@ -1,0 +1,7 @@
+cross-x86_64-pc34-linux-gnu/linux-headers -*
+=cross-x86_64-pc34-linux-gnu/linux-headers-4.14-r2 * ~* **
+cross-x86_64-pc34-linux-gnu/glibc -*
+=cross-x86_64-pc34-linux-gnu/glibc-2.34-r14 * ~* **
+cross-x86_64-pc34-linux-gnu/binutils amd64 ~amd64
+cross-x86_64-pc34-linux-gnu/gcc amd64 ~amd64
+cross-x86_64-pc34-linux-gnu/gdb amd64 ~amd64

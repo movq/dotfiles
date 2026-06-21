@@ -1,3 +1,0 @@
-llvm-core/llvm LLVM_TARGETS: X86 BPF AMDGPU WebAssembly -AArch64 -ARM -AVR -Hexagon -Lanai -LoongArch -MSP430 -Mips -NVPTX -PowerPC -RISCV -Sparc -SystemZ -XCore
-llvm-core/clang LLVM_TARGETS: X86 BPF AMDGPU WebAssembly -AArch64 -ARM -AVR -Hexagon -Lanai -LoongArch -MSP430 -Mips -NVPTX -PowerPC -RISCV -Sparc -SystemZ -XCore
-

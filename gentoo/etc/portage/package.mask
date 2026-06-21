@@ -1,3 +1,0 @@
-media-fonts/liberation-fonts
-dev-lang/rust-bin
->=app-shells/fish-4

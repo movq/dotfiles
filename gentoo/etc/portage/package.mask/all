@@ -1,0 +1,13 @@
+dev-lang/rust-bin
+dev-lang/go-bootstrap
+sys-auth/elogind
+>=dev-lang/rust-1.94
+sys-apps/systemd-utils
+>=sys-fs/ncdu-2
+sys-firmware/edk2-bin
+dev-java/openjdk-bin
+
+# Slopped
+>=net-misc/rsync-3.4.2
+>sys-boot/limine-12.3.2
+>media-libs/harfbuzz-12.3.2
