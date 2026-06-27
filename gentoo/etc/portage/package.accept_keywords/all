@@ -25,3 +25,9 @@ dev-python/asyncpg ~amd64
 dev-python/tulir-telethon ~amd64
 dev-python/cryptg ~amd64
 dev-python/hachoir ~amd64
+app-crypt/uacme ~amd64
+dev-util/open-policy-agent ~amd64
+net-im/matrix-authentication-service ~amd64
+app-misc/ntfy ~amd64
+app-admin/vaultwarden ~amd64
+www-apps/vaultwarden-web ~amd64

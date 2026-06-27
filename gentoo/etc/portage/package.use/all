@@ -72,3 +72,6 @@ app-eselect/eselect-php fpm
 net-im/synapse postgres
 mail-mta/postfix dovecot-sasl sasl
 net-mail/dovecot sieve
+net-dns/pdns postgres
+sys-apps/busybox savedconfig syslog
+app-admin/vaultwarden postgres
