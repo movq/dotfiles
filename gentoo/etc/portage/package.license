@@ -1,2 +1,3 @@
 sys-kernel/linux-firmware *
 media-libs/rlottie *
+x11-drivers/nvidia-drivers *
