@@ -6,6 +6,9 @@ sys-apps/systemd-utils
 sys-firmware/edk2-bin
 dev-java/openjdk-bin
 >=sys-kernel/linux-firmware-20260519
+<dev-lang/rust-1.95
+
+dev-java/openjdk-21.0.12_p8:21::gentoo
 
 # Slopped
 >=net-misc/rsync-3.4.2

@@ -1,0 +1,244 @@
+From ea98b633a416029f268c5caa72ee26ae57c25bc3 Mon Sep 17 00:00:00 2001
+From: Mike Jones <mike@mjones.org>
+Date: Mon, 14 Sep 2026 09:40:38 +0100
+Subject: [PATCH] OpenBSD Mdocdate
+
+---
+ doc/rcs.texi      |  7 ++++++
+ src/b-anchor.c    | 22 ++++++++++++-----
+ src/b-kwxout.c    | 23 ++++++++++++++++++
+ src/base.h        |  2 +-
+ tests/Makefile.am |  1 +
+ tests/Makefile.in |  1 +
+ tests/t392        | 61 +++++++++++++++++++++++++++++++++++++++++++++++
+ 7 files changed, 110 insertions(+), 7 deletions(-)
+ create mode 100644 tests/t392
+
+diff --git a/doc/rcs.texi b/doc/rcs.texi
+index 8ceefb5..2be45f9 100644
+--- a/doc/rcs.texi
++++ b/doc/rcs.texi
+@@ -1169,6 +1169,13 @@ the rest of the command-line.  The effective command-line that
+ @rcscommand{rlog} sees is thus @samp{-q -x/,v -zLT -L foo}.
+ @end defvr
+ 
++@defvr {Environment Variable} RCS_MDOCDATE
++When set to a nonempty value, @rcscommand{co} recognizes the OpenBSD
++@samp{Mdocdate} keyword and expands it to the revision date in
++@samp{Month D YYYY} format.  When unset or empty, the keyword is left
++unchanged.
++@end defvr
++
+ @defvr {Environment Variable} RCS_MEM_LIMIT
+ @cindex memory limit
+ Normally, for speed, commands either memory map or copy into memory
+diff --git a/src/b-anchor.c b/src/b-anchor.c
+index a864a9d..36cfe05 100644
+--- a/src/b-anchor.c
++++ b/src/b-anchor.c
+@@ -19,6 +19,7 @@
+ */
+ 
+ #include "base.h"
++#include <stdlib.h>
+ #include <string.h>
+ 
+ char const ks_revno[] = "revision number";
+@@ -77,9 +78,9 @@ static const uint8_t kwsub_pool[22] =
+   1,'b','\0'
+ };
+ 
+-static const uint8_t keyword_pool[80] =
++static const uint8_t keyword_pool[90] =
+ {
+-  11 /* count */,
++  12 /* count */,
+   6,'A','u','t','h','o','r','\0',
+   4,'D','a','t','e','\0',
+   6,'H','e','a','d','e','r','\0',
+@@ -90,7 +91,8 @@ static const uint8_t keyword_pool[80] =
+   7,'R','C','S','f','i','l','e','\0',
+   8,'R','e','v','i','s','i','o','n','\0',
+   6,'S','o','u','r','c','e','\0',
+-  5,'S','t','a','t','e','\0'
++  5,'S','t','a','t','e','\0',
++  8,'M','d','o','c','d','a','t','e','\0'
+ };
+ 
+ static bool
+@@ -172,9 +174,17 @@ recognize_keyword (char const *string, struct pool_found *found)
+       .size = limit
+     };
+ 
+-  return ((KDELIM == string[limit]
+-           || VDELIM == string[limit])
+-          && pool_lookup (keyword_pool, &x, found));
++  if ((KDELIM != string[limit] && VDELIM != string[limit])
++      || ! pool_lookup (keyword_pool, &x, found))
++    return false;
++
++  if (found->i == Mdocdate)
++    {
++      char const *enabled = getenv ("RCS_MDOCDATE");
++      return enabled && *enabled;
++    }
++
++  return true;
+ }
+ 
+ /* b-anchor.c ends here */
+diff --git a/src/b-kwxout.c b/src/b-kwxout.c
+index 64d323c..91902b7 100644
+--- a/src/b-kwxout.c
++++ b/src/b-kwxout.c
+@@ -21,6 +21,7 @@
+ */
+ 
+ #include "base.h"
++#include <stdlib.h>
+ #include <string.h>
+ #include "b-complain.h"
+ #include "b-divvy.h"
+@@ -28,6 +29,25 @@
+ #include "b-fro.h"
+ #include "b-kwxout.h"
+ 
++static void
++amdocdate (char const *date, FILE *out)
++/* Output an RCS date in the format used by OpenBSD's Mdocdate keyword.  */
++{
++  static char const *const month_name[] =
++    {
++      "January", "February", "March", "April", "May", "June",
++      "July", "August", "September", "October", "November", "December"
++    };
++  char *tail;
++  long year = strtol (date, &tail, 10);
++  long month = strtol (tail + 1, &tail, 10);
++  long day = strtol (tail + 1, NULL, 10);
++
++  if (year < 1900)
++    year += 1900;
++  aprintf (out, "%s %ld %ld", month_name[month - 1], day, year);
++}
++
+ static void
+ afilename (bool base, FILE *out)
+ /* Output to ‘out’ either the full comma-v filename (‘base’ false)
+@@ -140,6 +160,9 @@ keyreplace (struct pool_found *marker, struct expctx *ctx)
+         case State:
+           aputs (delta->state, out);
+           break;
++        case Mdocdate:
++          amdocdate (date, out);
++          break;
+         default:
+           break;
+         }
+diff --git a/src/base.h b/src/base.h
+index 11cc206..dcf5590 100644
+--- a/src/base.h
++++ b/src/base.h
+@@ -327,7 +327,7 @@ struct pool_found
+ enum markers
+ {
+   Author, Date, Header, Id,
+-  Locker, Log, Name, RCSfile, Revision, Source, State
++  Locker, Log, Name, RCSfile, Revision, Source, State, Mdocdate
+ };
+ 
+ /* This is used by ci and rlog.  */
+diff --git a/tests/Makefile.am b/tests/Makefile.am
+index 5891c93..e4ed292 100644
+--- a/tests/Makefile.am
++++ b/tests/Makefile.am
+@@ -60,6 +60,7 @@ TESTS = \
+  t380 \
+  t390 \
+  t391 \
++ t392 \
+  t400 \
+  t410 \
+  t420 \
+diff --git a/tests/Makefile.in b/tests/Makefile.in
+index b13fd19..0db3c8c 100644
+--- a/tests/Makefile.in
++++ b/tests/Makefile.in
+@@ -1598,6 +1598,7 @@ TESTS = \
+  t380 \
+  t390 \
+  t391 \
++ t392 \
+  t400 \
+  t410 \
+  t420 \
+diff --git a/tests/t392 b/tests/t392
+new file mode 100644
+index 0000000..f687e77
+--- /dev/null
++++ b/tests/t392
+@@ -0,0 +1,61 @@
++# t392 --- OpenBSD Mdocdate keyword expansion
++#
++# Copyright (C) 2026
++#
++# This program is free software: you can redistribute it and/or
++# modify it under the terms of the GNU General Public License as
++# published by the Free Software Foundation, either version 3 of
++# the License, or (at your option) any later version.
++#
++# This program is distributed in the hope that it will be useful,
++# but WITHOUT ANY WARRANTY; without even the implied warranty
++# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
++# See the GNU General Public License for more details.
++#
++# You should have received a copy of the GNU General Public License
++# along with this program.  If not, see <http://www.gnu.org/licenses/>.
++
++. $srcdir/common
++split_std_out_err no
++
++actual=$wd/actual
++expected=$wd/expected
++doubt=$wd/diff.out
++
++RCS_MDOCDATE=
++export RCS_MDOCDATE
++
++sed \
++  -e 's/date	2010.10.02.04.35.26/date	2010.03.07.04.35.26/' \
++  -e 's/@foo/@$Mdocdate$\
++$Mdocdate: stale value $/' \
++  `bundled_commav one` > $v
++
++printf '%s\n' \
++  '$Mdocdate$' \
++  '$Mdocdate: stale value $' > $expected
++must 'co -q -p $v > $actual'
++diff -u $expected $actual > $doubt
++noiselessness_rules $doubt 'Mdocdate expansion disabled by default'
++
++RCS_MDOCDATE=1
++export RCS_MDOCDATE
++
++printf '%s\n' \
++  '$Mdocdate: March 7 2010 $' \
++  '$Mdocdate: March 7 2010 $' > $expected
++must 'co -q -p $v > $actual'
++diff -u $expected $actual > $doubt
++noiselessness_rules $doubt 'Mdocdate single-digit day expansion'
++
++sed 's/2010.03.07/2010.03.17/' $v > $wd/y,v
++printf '%s\n' \
++  '$Mdocdate: March 17 2010 $' \
++  '$Mdocdate: March 17 2010 $' > $expected
++must 'co -q -p $wd/y,v > $actual'
++diff -u $expected $actual > $doubt
++noiselessness_rules $doubt 'Mdocdate double-digit day expansion'
++
++exit 0
++
++# t392 ends here
+-- 
+2.55.0
+

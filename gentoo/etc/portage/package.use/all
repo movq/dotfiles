@@ -1,9 +1,9 @@
 dev-lang/python pgo
 llvm-core/* LLVM_TARGETS: X86 WebAssembly BPF AMDGPU
-dev-lang/rust system-llvm rust-analyzer rust-src clippy rustfmt
+dev-lang/rust system-llvm rust-analyzer rust-src clippy rustfmt RUST_SYSROOTS: bpf wasm
 media-libs/libvpx postproc
 media-video/wireplumber LUA_SINGLE_TARGET: lua5-4
-www-client/librewolf system-png system-pipewire -gmp-autoupdate eme-free
+www-client/librewolf system-png system-pipewire -gmp-autoupdate eme-free sndio
 gui-libs/wlroots X
 gui-wm/sway X tray
 media-libs/mesa X vulkan
@@ -75,3 +75,15 @@ net-mail/dovecot sieve
 net-dns/pdns postgres
 sys-apps/busybox savedconfig syslog
 app-admin/vaultwarden postgres
+sys-fs/zfs-kmod -initramfs
+sys-process/htop lm-sensors
+net-analyzer/wireshark wifi
+dev-qt/qtmultimedia opengl
+net-wireless/kismet PYTHON_SINGLE_TARGET: python3_13
+mail-client/neomutt sasl
+sys-fs/btrfs-progs experimental
+x11-libs/pango X
+sys-fs/zfs -initramfs modules-compress
+dev-util/unicorn python
+dev-libs/capstone python
+media-sound/mpd sndio

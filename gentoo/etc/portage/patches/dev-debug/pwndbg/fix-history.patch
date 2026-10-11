@@ -1,0 +1,13 @@
+diff --git a/pwndbg/dbg/gdb/__init__.py b/pwndbg/dbg/gdb/__init__.py
+index 2be0c341c..29829c369 100644
+--- a/pwndbg/dbg/gdb/__init__.py
++++ b/pwndbg/dbg/gdb/__init__.py
+@@ -1519,6 +1519,8 @@ class GDB(pwndbg.dbg_mod.Debugger):
+             parsed_lines = []
+             for line in lines:
+                 num_cmd = line.split(maxsplit=1)
++                if not num_cmd:
++                    continue
+ 
+                 try:
+                     number = int(num_cmd[0])

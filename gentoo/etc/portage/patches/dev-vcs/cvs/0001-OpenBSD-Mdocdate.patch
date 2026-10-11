@@ -1,0 +1,228 @@
+From b445b1fa4c342b1257df10124e09227bf39ae473 Mon Sep 17 00:00:00 2001
+From: Mike Jones <mike@mjones.org>
+Date: Mon, 14 Sep 2026 09:57:09 +0100
+Subject: [PATCH] OpenBSD Mdocdate
+
+---
+ doc/cvs.texinfo | 14 +++++++++++
+ src/rcs.c       | 37 +++++++++++++++++++++++++++
+ src/sanity.sh   | 67 +++++++++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 118 insertions(+)
+
+diff --git a/doc/cvs.texinfo b/doc/cvs.texinfo
+index bdd5c46..94d594e 100644
+--- a/doc/cvs.texinfo
++++ b/doc/cvs.texinfo
+@@ -7164,6 +7164,14 @@ See @ref{Configuring keyword expansion} for more details.
+ @item $@splitrcskeyword{Date}$
+ The date and time (UTC) the revision was checked in.
+ 
++@cindex Mdocdate keyword
++@item $@splitrcskeyword{Mdocdate}$
++The date (UTC) the revision was checked in, in the
++@samp{Month D YYYY} format used by OpenBSD manual pages.
++This keyword is recognized only when the
++@code{$RCS_MDOCDATE} environment variable is set to a
++nonempty value.
++
+ @cindex Header keyword
+ @item $@splitrcskeyword{Header}$
+ A standard header containing the full pathname of the
+@@ -14766,6 +14774,12 @@ the local repository, the revision numbers will look
+ like 1.66.1000.xx. There is almost a dead-set certainty
+ that there will be no conflicts with version numbers.
+ 
++@cindex RCS_MDOCDATE, environment variable
++@item $RCS_MDOCDATE
++When set to a nonempty value, enables expansion of the
++OpenBSD $@splitrcskeyword{Mdocdate}$ keyword.  When unset
++or empty, the keyword is left unchanged.
++
+ @cindex COMSPEC, environment variable
+ @item $COMSPEC
+ Used under OS/2 only.  It specifies the name of the
+diff --git a/src/rcs.c b/src/rcs.c
+index e8c2100..490b6ca 100644
+--- a/src/rcs.c
++++ b/src/rcs.c
+@@ -103,6 +103,7 @@ static char *RCS_addbranch (RCSNode *, const char *);
+ static char *truncate_revnum_in_place (char *);
+ static char *truncate_revnum (const char *);
+ static char *printable_date (const char *);
++static char *printable_mdocdate (const char *);
+ static char *escape_keyword_value (const char *, int *);
+ static void expand_keywords (RCSNode *, RCSVers *, const char *,
+                              const char *, size_t, enum kflag, char *,
+@@ -3470,6 +3471,7 @@ enum keyword
+     KEYWORD_ID,
+     KEYWORD_LOCKER,
+     KEYWORD_LOG,
++    KEYWORD_MDOCDATE,
+     KEYWORD_NAME,
+     KEYWORD_RCSFILE,
+     KEYWORD_REVISION,
+@@ -3506,6 +3508,7 @@ new_keywords (void)
+     KEYWORD_INIT (new, KEYWORD_ID, "Id");
+     KEYWORD_INIT (new, KEYWORD_LOCKER, "Locker");
+     KEYWORD_INIT (new, KEYWORD_LOG, "Log");
++    KEYWORD_INIT (new, KEYWORD_MDOCDATE, "Mdocdate");
+     KEYWORD_INIT (new, KEYWORD_NAME, "Name");
+     KEYWORD_INIT (new, KEYWORD_RCSFILE, "RCSfile");
+     KEYWORD_INIT (new, KEYWORD_REVISION, "Revision");
+@@ -3544,6 +3547,30 @@ printable_date (const char *rcs_date)
+ 
+ 
+ 
++/* Convert an RCS date string into the format used by OpenBSD manual
++   pages.  */
++static char *
++printable_mdocdate (const char *rcs_date)
++{
++    static const char *const month_names[] =
++    {
++	"January", "February", "March", "April", "May", "June",
++	"July", "August", "September", "October", "November", "December"
++    };
++    int year, mon, mday, hour, min, sec;
++    char buf[100];
++
++    (void) sscanf (rcs_date, SDATEFORM, &year, &mon, &mday, &hour, &min,
++		   &sec);
++    if (year < 1900)
++	year += 1900;
++    assert (mon >= 1 && mon <= 12);
++    sprintf (buf, "%s %d %d", month_names[mon - 1], mday, year);
++    return xstrdup (buf);
++}
++
++
++
+ /* Escape the characters in a string so that it can be included in an
+    RCS value.  */
+ static char *
+@@ -3642,6 +3669,7 @@ expand_keywords (RCSNode *rcs, RCSVers *ver, const char *name, const char *log,
+     char *srch, *srch_next;
+     size_t srch_len;
+     const struct rcs_keyword *keywords;
++    const char *mdocdate_env;
+ 
+     if (!config /* For `cvs init', config may not be set.  */
+ 	||expand == KFLAG_O || expand == KFLAG_B)
+@@ -3653,6 +3681,7 @@ expand_keywords (RCSNode *rcs, RCSVers *ver, const char *name, const char *log,
+ 
+     if (!config->keywords) config->keywords = new_keywords ();
+     keywords = config->keywords;
++    mdocdate_env = getenv ("RCS_MDOCDATE");
+ 
+     /* If we are using -kkvl, dig out the locker information if any.  */
+     locker = NULL;
+@@ -3699,6 +3728,9 @@ expand_keywords (RCSNode *rcs, RCSVers *ver, const char *name, const char *log,
+ 		&& keyword->len == slen
+ 		&& strncmp (keyword->string, srch, slen) == 0)
+ 	    {
++		if (keyword->expandto == KEYWORD_MDOCDATE
++		    && (mdocdate_env == NULL || *mdocdate_env == '\0'))
++		    continue;
+ 		break;
+ 	    }
+ 	}
+@@ -3787,6 +3819,11 @@ expand_keywords (RCSNode *rcs, RCSVers *ver, const char *name, const char *log,
+ 					      &free_value);
+ 		break;
+ 
++	    case KEYWORD_MDOCDATE:
++		value = printable_mdocdate (ver->date);
++		free_value = 1;
++		break;
++
+ 	    case KEYWORD_NAME:
+ 		if (name != NULL && ! isdigit ((unsigned char) *name))
+ 		    value = (char *) name;
+diff --git a/src/sanity.sh b/src/sanity.sh
+index c023fd7..37b68ab 100755
+--- a/src/sanity.sh
++++ b/src/sanity.sh
+@@ -1586,6 +1586,9 @@ HOME=$TESTDIR/home; export HOME
+ # RCSINIT=-zLT get lots of spurious failures.
+ RCSINIT=; export RCSINIT
+ 
++# OpenBSD Mdocdate keyword expansion is opt-in.
++RCS_MDOCDATE=; export RCS_MDOCDATE
++
+ # Remaining arguments are the names of tests to run.
+ #
+ # The testsuite is broken up into (hopefully manageably-sized)
+@@ -22041,6 +22044,70 @@ revision 1\.1"
+ revision 1\.5
+ revision 1\.4"
+ 
++	  # Check OpenBSD Mdocdate formatting for both one- and two-digit days,
++	  # including replacement of a stale value.
++	  cat <<EOF >$TESTDIR/file3,v
++head	1.2;
++access;
++symbols;
++locks; strict;
++comment	@# @;
++
++
++1.2
++date	2010.03.17.04.35.26;	author joe;	state Exp;
++branches;
++next	1.1;
++
++1.1
++date	2010.03.07.04.35.26;	author joe;	state Exp;
++branches;
++next	;
++
++
++desc
++@Mdocdate keyword test
++@
++
++
++1.2
++log
++@two-digit day
++@
++text
++@\$Mdocdate\$
++\$Mdocdate: stale value \$
++@
++
++
++1.1
++log
++@single-digit day
++@
++text
++@@
++EOF
++	  modify_repo mv $TESTDIR/file3,v $CVSROOT_DIRNAME/first-dir/file3,v
++
++	  dotest rcs-20 "${testcvs} -q update -p -r1.1 file3" \
++'\$Mdocdate\$
++\$Mdocdate: stale value \$'
++	  dotest rcs-21 "RCS_MDOCDATE=1 ${testcvs} -q update -p -r1.1 file3" \
++'\$Mdocdate: March 7 2010 \$
++\$Mdocdate: March 7 2010 \$'
++	  dotest rcs-22 "RCS_MDOCDATE=1 ${testcvs} -q update -p -r1.2 file3" \
++'\$Mdocdate: March 17 2010 \$
++\$Mdocdate: March 17 2010 \$'
++	  dotest rcs-23 "RCS_MDOCDATE=1 ${testcvs} -q update -p -kk -r1.1 file3" \
++'\$Mdocdate\$
++\$Mdocdate\$'
++	  dotest rcs-24 "RCS_MDOCDATE=1 ${testcvs} -q update -p -kv -r1.1 file3" \
++'March 7 2010
++March 7 2010'
++	  dotest rcs-25 "RCS_MDOCDATE=1 ${testcvs} -q update -p -ko -r1.1 file3" \
++'\$Mdocdate\$
++\$Mdocdate: stale value \$'
++
+ 	  dokeep
+ 	  TZ=$save_TZ
+ 	  cd ..
+-- 
+2.55.0
+
