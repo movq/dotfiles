@@ -1,0 +1,328 @@
+From 3b2c152f9111db8ffdd3d6e7dcce3d83c2bf37e1 Mon Sep 17 00:00:00 2001
+From: Mike Jones <mike@mjones.org>
+Date: Mon, 12 Oct 2026 16:38:07 +0100
+Subject: [PATCH] copy_file_range()
+
+---
+ README.md         |   2 +
+ act_dedupefiles.c | 134 ++++++++++++++++++++++++++++++++++++++++++++++
+ act_dedupefiles.h |   3 ++
+ dumpflags.c       |   1 +
+ helptext.c        |   4 ++
+ jdupes.1          |   8 +++
+ jdupes.c          |  19 +++++--
+ jdupes.h          |   1 +
+ 8 files changed, 169 insertions(+), 3 deletions(-)
+
+diff --git a/README.md b/README.md
+index e6db896..e5782fd 100644
+--- a/README.md
++++ b/README.md
+@@ -97,6 +97,8 @@ option is specified (delete, summarize, link, dedupe, etc.)
+  -1 --one-file-system   do not match files on different filesystems/devices
+  -A --no-hidden         exclude hidden files from consideration
+  -B --dedupe            do a copy-on-write (reflink/clone) deduplication
++ -c --dedupe-copy-range dedupe with copy_file_range(), assuming the FS does
++                        a CoW clone (e.g. ZFS block cloning across datasets)
+  -C --chunk-size=#      override I/O chunk size; valid range is 0-18.
+                         Use '-C help' for detailed chunk size help
+  -d --delete            prompt user for files to preserve and delete all
+diff --git a/act_dedupefiles.c b/act_dedupefiles.c
+index e8d83b4..97b7c9a 100644
+--- a/act_dedupefiles.c
++++ b/act_dedupefiles.c
+@@ -1,6 +1,11 @@
+ /* Deduplication of files with OS-specific copy-on-write mechanisms
+  * This file is part of jdupes; see jdupes.c for license information */
+ 
++/* copy_file_range() requires _GNU_SOURCE */
++#if defined __linux__ && !defined _GNU_SOURCE
++ #define _GNU_SOURCE
++#endif
++
+ #include "jdupes.h"
+ 
+ #ifdef ENABLE_DEDUPE
+@@ -11,6 +16,7 @@
+ #include <stdlib.h>
+ #include <stdint.h>
+ #include <string.h>
++#include <sys/stat.h>
+ #include <unistd.h>
+ 
+ #include "act_dedupefiles.h"
+@@ -32,6 +38,7 @@
+  #include <sys/ioctl.h>
+  #define JDUPES_DEDUPE_SUPPORTED 1
+  #define KERNEL_DEDUP_MAX_SIZE 16777216
++ #define COPY_RANGE_MAX_SIZE 1073741824
+  /* Error messages */
+  static const char s_err_dedupe_notabug[] = "This is not a bug in jdupes; check your file stats/permissions.";
+  static const char s_err_dedupe_repeated[] = "This verbose error description will not be repeated.";
+@@ -168,4 +175,131 @@ void dedupefiles(file_t * restrict files)
+ #endif /* __APPLE__ */
+   return;
+ }
++
++
++#ifdef __linux__
++/* "Copy" duplicates over each other with copy_file_range(), assuming that
++ * the filesystem performs a CoW block clone instead of a real copy (ZFS block
++ * cloning only works across datasets this way). Unlike FIDEDUPERANGE, the
++ * kernel does NOT verify that the data is identical, so the caller must have
++ * done a full byte-for-byte match confirmation. */
++void dedupefiles_copyrange(file_t * restrict files)
++{
++  file_t *curfile, *curfile2, *dupefile;
++  int src_fd, dest_fd;
++  int err_eighteen = 0;
++  uint64_t total_files = 0;
++
++  LOUD(fprintf(stderr, "\ndedupefiles_copyrange: %p\n", files);)
++
++  for (curfile = files; curfile; curfile = curfile->next) {
++    /* Skip all files that have no duplicates */
++    if (!ISFLAG(curfile->flags, FF_HAS_DUPES)) continue;
++    CLEARFLAG(curfile->flags, FF_HAS_DUPES);
++
++    /* For each duplicate list head, handle the duplicates in the list */
++    curfile2 = curfile;
++    src_fd = open(curfile->d_name, O_RDONLY);
++    /* If an open fails, keep going down the dupe list until it is exhausted */
++    while (src_fd == -1 && curfile2->duplicates && curfile2->duplicates->duplicates) {
++      fprintf(stderr, "dedupe: open failed (skipping): %s\n", curfile2->d_name);
++      exit_status = EXIT_FAILURE;
++      curfile2 = curfile2->duplicates;
++      src_fd = open(curfile2->d_name, O_RDONLY);
++    }
++    if (src_fd == -1) continue;
++    printf("  [SRC] %s\n", curfile2->d_name);
++
++    /* Run copy_file_range for each set */
++    for (dupefile = curfile->duplicates; dupefile; dupefile = dupefile->duplicates) {
++      struct stat dest_stat;
++      struct timespec times[2];
++      off_t src_off, dest_off, remain;
++      ssize_t ret = 0;
++
++      if (dupefile == curfile2) continue;
++
++      /* Don't copy over hard links to the source */
++      if (dupefile->device == curfile2->device && dupefile->inode == curfile2->inode) {
++        printf("  -==-> %s\n", dupefile->d_name);
++        continue;
++      }
++
++      /* The kernel won't compare data, so refuse to write if anything changed */
++      if (file_has_changed(curfile2)) {
++        fprintf(stderr, "error: source file modified since scanned, skipping set: %s\n", curfile2->d_name);
++        exit_status = EXIT_FAILURE;
++        break;
++      }
++      if (file_has_changed(dupefile)) {
++        printf("  -XX-> %s\n", dupefile->d_name);
++        fprintf(stderr, "error: target file modified since scanned, not deduping\n");
++        exit_status = EXIT_FAILURE;
++        continue;
++      }
++
++      /* Open destination file, skipping any that fail */
++      dest_fd = open(dupefile->d_name, O_WRONLY);
++      if (dest_fd == -1) {
++        fprintf(stderr, "dedupe: open failed (skipping): %s\n", dupefile->d_name);
++        exit_status = EXIT_FAILURE;
++        continue;
++      }
++      /* Save timestamps; writing to the file will change them */
++      if (fstat(dest_fd, &dest_stat) != 0) {
++        fprintf(stderr, "dedupe: fstat failed (skipping): %s\n", dupefile->d_name);
++        exit_status = EXIT_FAILURE;
++        close(dest_fd);
++        continue;
++      }
++
++      /* Clone src --> dest, 1 GiB or less at a time */
++      src_off = 0;
++      dest_off = 0;
++      remain = dupefile->size;
++      errno = 0;
++      while (remain > 0) {
++        ret = copy_file_range(src_fd, &src_off, dest_fd, &dest_off,
++            (size_t)(remain <= COPY_RANGE_MAX_SIZE ? remain : COPY_RANGE_MAX_SIZE), 0);
++        if (ret <= 0) break;
++        remain -= (off_t)ret;
++      }
++
++      /* Handle any errors */
++      if (remain != 0) {
++        printf("  -XX-> %s\n", dupefile->d_name);
++        if (ret == 0) fprintf(stderr, "error: source file ended early (modified during dedupe?)\n");
++        else fprintf(stderr, "error: %s (%d)\n", strerror(errno), errno);
++        exit_status = EXIT_FAILURE;
++        if (errno == EXDEV && err_eighteen == 0) {
++          fprintf(stderr, "       One or more files are on filesystems that the kernel will not\n");
++          fprintf(stderr, "       copy_file_range() between (different filesystems or ZFS pools?)\n");
++          fprintf(stderr, "       %s\n", s_err_dedupe_notabug);
++          fprintf(stderr, "       %s\n", s_err_dedupe_repeated);
++          err_eighteen = 1;
++        }
++      } else {
++        /* Dedupe OK; report to the user and add to file count */
++        printf("  ====> %s\n", dupefile->d_name);
++        total_files++;
++      }
++
++      /* Restore the original timestamps */
++      times[0] = dest_stat.st_atim;
++      times[1] = dest_stat.st_mtim;
++      if (futimens(dest_fd, times) != 0) {
++        fprintf(stderr, "warning: failed to restore timestamps: %s\n", dupefile->d_name);
++        exit_status = EXIT_FAILURE;
++      }
++      close(dest_fd);
++    }
++    printf("\n");
++    close(src_fd);
++    total_files++;
++  }
++
++  if (!ISFLAG(flags, F_HIDEPROGRESS)) fprintf(stderr, "Deduplication done (%" PRIuMAX " files processed)\n", total_files);
++  return;
++}
++#endif /* __linux__ */
+ #endif /* ENABLE_DEDUPE */
+diff --git a/act_dedupefiles.h b/act_dedupefiles.h
+index 9ca5c98..e1d9659 100644
+--- a/act_dedupefiles.h
++++ b/act_dedupefiles.h
+@@ -10,6 +10,9 @@ extern "C" {
+ 
+ #include "jdupes.h"
+ void dedupefiles(file_t * restrict files);
++#ifdef __linux__
++void dedupefiles_copyrange(file_t * restrict files);
++#endif
+ 
+ #ifdef __cplusplus
+ }
+diff --git a/dumpflags.c b/dumpflags.c
+index ddc1d23..f758ca3 100644
+--- a/dumpflags.c
++++ b/dumpflags.c
+@@ -48,6 +48,7 @@ void dump_all_flags(void)
+   if (ISFLAG(a_flags, FA_PRINTNULL)) fprintf(stderr, " FA_PRINTNULL");
+   if (ISFLAG(a_flags, FA_PRINTJSON)) fprintf(stderr, " FA_PRINTJSON");
+   if (ISFLAG(a_flags, FA_ERRORONDUPE)) fprintf(stderr, " FA_ERRORONDUPE");
++  if (ISFLAG(a_flags, FA_DEDUPECOPYRANGE)) fprintf(stderr, " FA_DEDUPECOPYRANGE");
+ 
+   /* Extra print flags */
+   if (ISFLAG(p_flags, PF_PARTIAL)) fprintf(stderr, " PF_PARTIAL");
+diff --git a/helptext.c b/helptext.c
+index a719144..c8173fa 100644
+--- a/helptext.c
++++ b/helptext.c
+@@ -103,6 +103,10 @@ void help_text(void)
+   printf(" -A --no-hidden    \texclude hidden files from consideration\n");
+ #ifdef ENABLE_DEDUPE
+   printf(" -B --dedupe      \tdo a copy-on-write (reflink/clone) deduplication\n");
++ #ifdef __linux__
++  printf(" -c --dedupe-copy-range\tdedupe with copy_file_range(), assuming the FS does\n");
++  printf("                  \ta CoW clone (e.g. ZFS block cloning across datasets)\n");
++ #endif
+ #endif
+ #ifndef NO_CHUNKSIZE
+   printf(" -C --chunk-size=#\toverride I/O chunk size; valid range is 0-18.\n");
+diff --git a/jdupes.1 b/jdupes.1
+index 670954f..213f468 100644
+--- a/jdupes.1
++++ b/jdupes.1
+@@ -41,6 +41,14 @@ data deduplication on disk (known as copy-on-write, CoW, cloning, or
+ reflink); only a few filesystems support this (BTRFS; XFS when mkfs.xfs
+ was used with -m crc=1,reflink=1; Apple APFS)
+ .TP
++.B -c --dedupe-copy-range
++(Linux only) use copy_file_range() to copy each duplicate's source file over
++it, assuming that the filesystem performs a copy-on-write block clone rather
++than a real copy; this is needed for ZFS block cloning across datasets. The
++kernel does not verify that the data is identical, so a full byte-for-byte
++comparison is always done first. If the filesystem does not clone, the data
++is really copied (the contents still match, but no space is saved).
++.TP
+ .B -C --chunk-size=\fIsize-number\fR
+ override I/O chunk size; jdupes tunes this automatically but if you have large
+ files on mechanical hard drives, large chunks may reduce seek time penalties
+diff --git a/jdupes.c b/jdupes.c
+index 790827f..8690ab7 100644
+--- a/jdupes.c
++++ b/jdupes.c
+@@ -193,6 +193,7 @@ int main(int argc, char **argv)
+     { "no-hidden", 0, 0, 'A' },
+     { "dedupe", 0, 0, 'B' },
+     { "hash-db-opts", 1, 0, 'b' },
++    { "dedupe-copy-range", 0, 0, 'c' },
+     { "chunk-size", 1, 0, 'C' },
+     { "debug", 0, 0, 'D' },
+     { "delete", 0, 0, 'd' },
+@@ -237,7 +238,7 @@ int main(int argc, char **argv)
+  #define GETOPT getopt
+ #endif
+ 
+-#define GETOPT_STRING "@019ABb:C:DdEefHhIijKLlMmNnOo:P:pQqRrSsTtUuVvX:Yy:Zz"
++#define GETOPT_STRING "@019ABb:cC:DdEefHhIijKLlMmNnOo:P:pQqRrSsTtUuVvX:Yy:Zz"
+ 
+   /* Verify libjodycode compatibility before going further */
+   if (libjodycode_version_check(1, 0) != 0) {
+@@ -327,6 +328,14 @@ int main(int argc, char **argv)
+       CLEARFLAG(flags, F_INCLUDEEMPTY);
+       LOUD(fprintf(stderr, "opt: CoW/block-level deduplication enabled (--dedupe)\n");)
+       break;
++#ifdef __linux__
++    case 'c':
++      /* The kernel does not compare data, so F_QUICKCOMPARE must NOT be set */
++      SETFLAG(a_flags, FA_DEDUPECOPYRANGE);
++      CLEARFLAG(flags, F_INCLUDEEMPTY);
++      LOUD(fprintf(stderr, "opt: copy_file_range() CoW deduplication enabled (--dedupe-copy-range)\n");)
++      break;
++#endif /* __linux__ */
+ #endif /* ENABLE_DEDUPE */
+ #ifndef NO_HASHDB
+     case 'b':
+@@ -625,10 +634,11 @@ skip_partialonly_noise:
+       !!ISFLAG(a_flags, FA_PRINTJSON) +
+       !!ISFLAG(a_flags, FA_PRINTUNIQUE) +
+       !!ISFLAG(a_flags, FA_ERRORONDUPE) +
+-      !!ISFLAG(a_flags, FA_DEDUPEFILES);
++      !!ISFLAG(a_flags, FA_DEDUPEFILES) +
++      !!ISFLAG(a_flags, FA_DEDUPECOPYRANGE);
+ 
+   if (pm > 1) {
+-      fprintf(stderr, "Only one of --summarize, --print-summarize, --delete, --link-hard,\n--link-soft, --json, --error-on-dupe, or --dedupe may be used\n");
++      fprintf(stderr, "Only one of --summarize, --print-summarize, --delete, --link-hard,\n--link-soft, --json, --error-on-dupe, --dedupe, or --dedupe-copy-range may be used\n");
+       exit(EXIT_FAILURE);
+   }
+   if (pm == 0) SETFLAG(a_flags, FA_PRINTMATCHES);
+@@ -839,6 +849,9 @@ skip_file_scan:
+ #endif /* NO_HARDLINKS */
+ #ifdef ENABLE_DEDUPE
+   if (ISFLAG(a_flags, FA_DEDUPEFILES)) dedupefiles(files);
++ #ifdef __linux__
++  if (ISFLAG(a_flags, FA_DEDUPECOPYRANGE)) dedupefiles_copyrange(files);
++ #endif /* __linux__ */
+ #endif /* ENABLE_DEDUPE */
+   if (ISFLAG(a_flags, FA_PRINTMATCHES)) printmatches(files);
+   if (ISFLAG(a_flags, FA_PRINTUNIQUE)) printunique(files);
+diff --git a/jdupes.h b/jdupes.h
+index ae03fbe..19a84a4 100644
+--- a/jdupes.h
++++ b/jdupes.h
+@@ -158,6 +158,7 @@ extern uint64_t flags, a_flags, p_flags;
+ #define FA_PRINTNULL		(1U << 9)
+ #define FA_PRINTJSON		(1U << 10)
+ #define FA_ERRORONDUPE		(1U << 11)
++#define FA_DEDUPECOPYRANGE	(1U << 12)
+ 
+ /* Per-file true/false flags */
+ #define FF_VALID_STAT		(1U << 0)
+-- 
+2.55.0
+
