@@ -50,3 +50,4 @@ app-editors/neovim ~amd64
 dev-lua/luv ~amd64
 app-misc/jdupes ~amd64
 dev-libs/libjodycode ~amd64
+dev-python/vcs-versioning ~amd64

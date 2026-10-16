@@ -58,7 +58,7 @@ app-office/libreoffice -gtk3 gtk4 -mariadb
 sys-process/runit -scripts
 sys-apps/s6-linux-init -sysv-utils
 sys-fs/squashfs-tools lzma zstd
-app-emulation/qemu -pin-upstream-blobs seccomp gtk vte virgl zstd sdl opengl QEMU_SOFTMMU_TARGETS: x86_64 i386 aarch64 QEMU_USER_TARGETS: aarch64
+app-emulation/qemu -pin-upstream-blobs seccomp gtk vte virgl zstd sdl opengl static-user QEMU_SOFTMMU_TARGETS: x86_64 i386 aarch64 QEMU_USER_TARGETS: aarch64
 media-libs/libsdl2 gles2
 sys-firmware/sgabios -binary
 sys-firmware/ipxe -binary
@@ -87,3 +87,9 @@ sys-fs/zfs -initramfs modules-compress
 dev-util/unicorn python
 dev-libs/capstone python
 media-sound/mpd sndio
+dev-util/android-tools python
+dev-libs/glib static-libs
+sys-apps/attr static-libs
+dev-libs/libpcre2 static-libs
+virtual/zlib static-libs
+sys-libs/zlib static-libs
