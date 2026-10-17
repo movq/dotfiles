@@ -5,7 +5,7 @@ media-libs/libvpx postproc
 media-video/wireplumber LUA_SINGLE_TARGET: lua5-4
 www-client/librewolf system-png system-pipewire -gmp-autoupdate eme-free sndio
 gui-libs/wlroots X
-gui-wm/sway X tray
+gui-wm/sway X -tray
 media-libs/mesa X vulkan
 media-libs/libglvnd X
 media-libs/libepoxy X
